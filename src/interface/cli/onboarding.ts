@@ -21,19 +21,19 @@ export function generateMcpSnippets(projectPath: string): McpSnippets {
       mcpServers: {
         ubp: {
           command: 'npx',
-          args: ['-y', 'ubp', 'serve'],
+          args: ['-y', '@sert-xx/ubp', 'serve'],
           cwd: absPath,
         },
       },
     },
 
-    claudeCode: `claude mcp add ubp -- npx -y ubp serve --cwd ${absPath}`,
+    claudeCode: `claude mcp add ubp -- npx -y @sert-xx/ubp serve --cwd ${absPath}`,
 
     cursor: {
       mcpServers: {
         ubp: {
           command: 'npx',
-          args: ['-y', 'ubp', 'serve'],
+          args: ['-y', '@sert-xx/ubp', 'serve'],
           cwd: absPath,
         },
       },

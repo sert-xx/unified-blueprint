@@ -1,5 +1,5 @@
 {
-  "name": "ubp",
+  "name": "@sert-xx/ubp",
   "version": "0.1.0",
   "description": "Documentation-as-Code Middleware — Markdown docs to Document Graph for AI agents",
   "type": "module",
@@ -7,6 +7,13 @@
     "ubp": "./dist/main.js"
   },
   "main": "./dist/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sert-xx/unified-blueprint.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/main.ts",
