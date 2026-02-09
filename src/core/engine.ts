@@ -829,7 +829,7 @@ export class UbpEngine {
         const excluded =
           dirRelative.includes('node_modules/') ||
           dirRelative.includes('.git/') ||
-          matchesGlobPatterns(dirRelative, ['**'], config.source.exclude);
+          matchesGlobPatterns(dirRelative, config.source.exclude, []);
         if (!excluded) {
           await this.walkDirectory(fullPath, docsRoot, config, results);
         }
