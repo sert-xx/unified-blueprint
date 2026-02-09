@@ -11,23 +11,27 @@ import { startMcpServer } from '../../mcp/server.js';
 export function serveCommand(): Command {
   return new Command('serve')
     .description('Start Watcher + MCP Server as a persistent process')
-    .action(async (_options, cmd) => {
+    .option('--no-lock', 'Skip process lock (for MCP client managed processes)')
+    .action(async (options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
+      const useLock = options.lock !== false;
 
       try {
         const engine = await createUbpEngine(globals.cwd);
 
-        // 1. Lock file to prevent multiple instances
-        const lockResult = engine.acquireLock();
-        if (!lockResult.acquired) {
-          exitWithError(
-            {
-              message: 'Another UBP server is already running',
-              cause: `PID ${lockResult.existingPid} is active`,
-              hint: `Run 'kill ${lockResult.existingPid}' or delete .ubp/serve.lock`,
-            },
-            globals,
-          );
+        // 1. Lock file to prevent multiple instances (skip when managed by MCP client)
+        if (useLock) {
+          const lockResult = engine.acquireLock();
+          if (!lockResult.acquired) {
+            exitWithError(
+              {
+                message: 'Another UBP server is already running',
+                cause: `PID ${lockResult.existingPid} is active`,
+                hint: `Run 'kill ${lockResult.existingPid}' or delete .ubp/serve.lock`,
+              },
+              globals,
+            );
+          }
         }
 
         // 2. DB integrity check (crash recovery)
@@ -48,9 +52,15 @@ export function serveCommand(): Command {
 
           process.stderr.write(`[UBP] Received ${signal}. Shutting down...\n`);
 
-          engine.stopWatching();
-          await engine.close();
-          engine.releaseLock();
+          try {
+            engine.stopWatching();
+            await engine.close();
+            if (useLock) {
+              engine.releaseLock();
+            }
+          } catch {
+            // Suppress shutdown errors to avoid ONNX Runtime mutex crash noise
+          }
 
           process.exit(0);
         };
