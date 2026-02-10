@@ -143,4 +143,70 @@ Some text here.`;
     const result = parseMarkdown('Some content', 'docs/guides/setup.md');
     expect(result.title).toBe('setup');
   });
+
+  it('extracts standard Markdown links as references', () => {
+    const content = `## Overview
+
+See [auth guide](./auth.md) for details.
+`;
+    const result = parseMarkdown(content, 'index.md');
+
+    expect(result.links).toHaveLength(1);
+    expect(result.links[0]!.target).toBe('auth');
+    expect(result.links[0]!.type).toBe('references');
+  });
+
+  it('extracts both WikiLinks and Markdown links', () => {
+    const content = `## Overview
+
+See [[PageA]] and [PageB](./page-b.md) for details.
+`;
+    const result = parseMarkdown(content, 'test.md');
+
+    expect(result.links).toHaveLength(2);
+    expect(result.links[0]!.target).toBe('PageA');
+    expect(result.links[1]!.target).toBe('page-b');
+  });
+
+  it('deduplicates when WikiLink and Markdown link point to same target', () => {
+    const content = `## Overview
+
+See [[auth]] and [auth guide](./auth.md) for details.
+`;
+    const result = parseMarkdown(content, 'test.md');
+
+    // WikiLink target "auth" and md link target "auth" should deduplicate
+    expect(result.links).toHaveLength(1);
+    expect(result.links[0]!.target).toBe('auth');
+  });
+
+  it('handles document with only Markdown links', () => {
+    const content = `## Guide
+
+Read [setup](./setup.md) and [config](./config.md).
+`;
+    const result = parseMarkdown(content, 'index.md');
+
+    expect(result.links).toHaveLength(2);
+    expect(result.links[0]!.target).toBe('setup');
+    expect(result.links[1]!.target).toBe('config');
+  });
+
+  it('assigns section orders to Markdown links', () => {
+    const longPara = 'This is a sufficiently long paragraph with enough words to make the token estimator exceed the minimum threshold of thirty-two tokens so that it does not get merged into adjacent sections during post-processing.';
+    const content = `## Section 1
+
+${longPara}
+
+## Section 2
+
+See [page](./page.md) for details. ${longPara}
+`;
+    const result = parseMarkdown(content, 'test.md');
+
+    const mdLink = result.links.find((l) => l.target === 'page');
+    expect(mdLink).toBeDefined();
+    // The link should be in the second section (order >= 1)
+    expect(mdLink!.sectionOrder).toBeGreaterThanOrEqual(1);
+  });
 });

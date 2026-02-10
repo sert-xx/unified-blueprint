@@ -165,4 +165,39 @@ describe('assignSectionOrders', () => {
     assignSectionOrders(links, sections, 'Some content');
     expect(links[0]!.sectionOrder).toBe(0);
   });
+
+  it('uses _searchPattern when available', () => {
+    const fullContent = 'Intro\n\n## Section 1\n\nSee [page](./page.md)\n\n## Section 2\n\nMore text';
+    const links: ParsedLink[] = [
+      {
+        target: 'page',
+        type: 'references',
+        context: '',
+        sectionOrder: 0,
+        _searchPattern: '](./page.md)',
+      },
+    ];
+    const sections = [
+      { content: 'Intro', order: 0 },
+      { content: 'See [page](./page.md)', order: 1 },
+      { content: 'More text', order: 2 },
+    ];
+
+    assignSectionOrders(links, sections, fullContent);
+    expect(links[0]!.sectionOrder).toBe(1);
+  });
+
+  it('falls back to WikiLink pattern when _searchPattern is not set', () => {
+    const fullContent = 'Intro\n\n## Section 1\n\nSee [[PageA]]';
+    const links: ParsedLink[] = [
+      { target: 'PageA', type: 'references', context: '', sectionOrder: 0 },
+    ];
+    const sections = [
+      { content: 'Intro', order: 0 },
+      { content: 'See [[PageA]]', order: 1 },
+    ];
+
+    assignSectionOrders(links, sections, fullContent);
+    expect(links[0]!.sectionOrder).toBe(1);
+  });
 });

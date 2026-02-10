@@ -98,6 +98,7 @@ export const remarkWikiLink: Plugin<[], Root> = function () {
           type: linkType,
           context,
           sectionOrder: 0, // section-splitter が後で設定する
+          _searchPattern: `[[${target}`,
         });
       }
     });
@@ -118,8 +119,8 @@ export function assignSectionOrders(
   fullContent: string,
 ): void {
   for (const link of links) {
-    // context から元の WikiLink パターンを復元して位置を推定
-    const linkPattern = `[[${link.target}`;
+    // _searchPattern がある場合はそれを使用、なければ従来の WikiLink パターン
+    const linkPattern = link._searchPattern ?? `[[${link.target}`;
     const linkOffset = fullContent.indexOf(linkPattern);
     if (linkOffset === -1) {
       // 位置不明の場合は最初のセクション

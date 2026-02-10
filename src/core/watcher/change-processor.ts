@@ -259,7 +259,16 @@ export class ChangeProcessor {
       });
     }
 
-    return { linkInserts, resolved, dangling };
+    // 解決後の重複排除（同じ target_doc_id + type のリンクは最初のものを優先）
+    const seen = new Set<string>();
+    const dedupedInserts = linkInserts.filter((link) => {
+      const key = `${link.target_doc_id ?? ''}::${link.type}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return { linkInserts: dedupedInserts, resolved, dangling };
   }
 
   private async computeSourceRefHashes(

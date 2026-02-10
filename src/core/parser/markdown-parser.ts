@@ -14,6 +14,7 @@ import { visit } from 'unist-util-visit';
 
 import { parseFrontmatter } from './frontmatter-parser.js';
 import { remarkWikiLink, assignSectionOrders } from './wikilink-extractor.js';
+import { remarkMarkdownLink } from './mdlink-extractor.js';
 import { splitSections, type SplitOptions } from './section-splitter.js';
 import type { ParseResult, ParsedLink, Frontmatter } from '../../shared/types.js';
 import { ParseError } from '../../shared/errors.js';
@@ -25,7 +26,8 @@ function createProcessor() {
   return unified()
     .use(remarkParse)
     .use(remarkFrontmatter, ['yaml'])
-    .use(remarkWikiLink);
+    .use(remarkWikiLink)
+    .use(remarkMarkdownLink);
 }
 
 /**
@@ -107,11 +109,30 @@ export function parseMarkdown(
     // セクション分割
     const sections = splitSections(tree, content, options?.splitOptions);
 
-    // WikiLink 抽出結果を取得
-    const links: ParsedLink[] =
+    // WikiLink + Markdown リンク抽出結果を取得・マージ
+    const wikilinks: ParsedLink[] =
       (vfile.data['wikilinks'] as ParsedLink[] | undefined) ?? [];
+    const mdlinks: ParsedLink[] =
+      (vfile.data['mdlinks'] as ParsedLink[] | undefined) ?? [];
 
-    // WikiLink の sectionOrder を設定
+    // WikiLink のターゲットを正規化して Set 化
+    const seenTargets = new Set(
+      wikilinks.map((l) =>
+        l.target.toLowerCase().replace(/\.md$/, '').normalize('NFC'),
+      ),
+    );
+
+    // Markdown リンクのうち WikiLink と重複しないものだけ追加
+    const uniqueMdlinks = mdlinks.filter(
+      (l) =>
+        !seenTargets.has(
+          l.target.toLowerCase().replace(/\.md$/, '').normalize('NFC'),
+        ),
+    );
+
+    const links = [...wikilinks, ...uniqueMdlinks];
+
+    // リンクの sectionOrder を設定
     assignSectionOrders(links, sections, content);
 
     // タイトル解決

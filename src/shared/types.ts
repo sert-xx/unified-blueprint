@@ -89,6 +89,8 @@ export interface ParsedLink {
   type: LinkType;
   context: string;
   sectionOrder: number;
+  /** assignSectionOrders用の検索パターン（内部利用のみ） */
+  _searchPattern?: string;
 }
 
 export interface ParseResult {
