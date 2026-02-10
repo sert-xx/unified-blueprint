@@ -104,7 +104,7 @@ CREATE TABLE sections (
 
 ### links
 
-WikiLinkから抽出されたドキュメント間の関係を格納する。
+WikiLinkおよび通常Markdownリンクから抽出されたドキュメント間の関係を格納する。
 
 ```sql
 CREATE TABLE links (
@@ -128,17 +128,19 @@ CREATE TABLE links (
 
 #### リンク種別
 
-| 種別 | WikiLink記法 | 意味 |
+| 種別 | 記法 | 意味 |
 |---|---|---|
-| `references` | `[[target]]` | 参照（デフォルト） |
+| `references` | `[[target]]` または `[text](./target.md)` | 参照（デフォルト） |
 | `depends_on` | `[[target\|depends_on]]` | 依存関係 |
 | `implements` | `[[target\|implements]]` | 実装 |
 | `extends` | `[[target\|extends]]` | 拡張 |
 | `conflicts_with` | `[[target\|conflicts_with]]` | 競合 |
 
+通常Markdownリンクは常に`references`型として取り込まれる。型付きリンクが必要な場合はWikiLink記法を使用する。
+
 #### ダングリングリンク
 
-`target_doc_id`がNULLのリンクはダングリングリンク（未解決リンク）。`target_title`にWikiLinkの記述名を保持する。新しいドキュメントが追加された際に、`LinkResolver`がタイトル・ベースネームマッチングで自動解決する。
+`target_doc_id`がNULLのリンクはダングリングリンク（未解決リンク）。`target_title`にWikiLinkまたはMarkdownリンクのターゲット名を保持する。新しいドキュメントが追加された際に、`LinkResolver`がタイトル・ベースネーム・パスマッチングで自動解決する。
 
 ### source_refs_state
 

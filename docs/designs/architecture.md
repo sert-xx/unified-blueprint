@@ -14,7 +14,7 @@ Unified Blueprint（UBP）は、Git管理されたMarkdownドキュメント群�
 
 - **ローカルファースト**: 外部APIへの依存なし。Embeddingモデルはローカル実行（transformers.js / ONNX Runtime）
 - **ゼロコンフィグ起動**: `ubp init` 一発でセットアップ完了。デフォルト設定で実用的に動作する
-- **Documentation-as-Code**: ドキュメントはGitで管理し、WikiLinkでドキュメント間の関係を明示する
+- **Documentation-as-Code**: ドキュメントはGitで管理し、WikiLinkおよび通常Markdownリンクでドキュメント間の関係を明示する
 - **MCP統合**: Model Context Protocol経由でClaude Desktop・Cursor等のAIエージェントと直接連携する
 
 ## レイヤー構造
@@ -46,7 +46,7 @@ Unified Blueprint（UBP）は、Git管理されたMarkdownドキュメント群�
 
 ### Source Layer（入力）
 
-Git管理されたMarkdownファイル群。フロントマターで`doc_type`・`source_refs`等のメタデータを、本文中のWikiLink（`[[target|link_type]]`）でドキュメント間の関係を記述する。
+Git管理されたMarkdownファイル群。フロントマターで`doc_type`・`source_refs`等のメタデータを、本文中のWikiLink（`[[target|link_type]]`）および通常Markdownリンク（`[text](./path.md)`）でドキュメント間の関係を記述する。
 
 ### Core Layer
 
@@ -54,8 +54,8 @@ Git管理されたMarkdownファイル群。フロントマターで`doc_type`�
 
 | モジュール | ディレクトリ | 責務 |
 |---|---|---|
-| Parser | `src/core/parser/` | Markdownパース、フロントマター解析、セクション分割、WikiLink抽出 |
-| Linker | `src/core/linker/` | WikiLinkのファイルパス解決、ダングリングリンクの再解決 |
+| Parser | `src/core/parser/` | Markdownパース、フロントマター解析、セクション分割、WikiLink・Markdownリンク抽出 |
+| Linker | `src/core/linker/` | WikiLink・Markdownリンクのファイルパス解決、ダングリングリンクの再解決 |
 | Search | `src/core/search/` | ハイブリッド検索（ベクトル＋グラフ＋FTS5）、フォールバック |
 | Graph | `src/core/graph/` | N-hopグラフ走査、近接度スコアリング |
 | Watcher | `src/core/watcher/` | ファイル変更監視、デバウンス処理、変更パイプライン |

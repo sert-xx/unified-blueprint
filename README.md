@@ -5,7 +5,7 @@ Documentation-as-Code ミドルウェア。Markdown ドキュメントを Docume
 ## 特徴
 
 - **3-way ハイブリッド検索** — ベクトル検索 + グラフ探索 + FTS5 全文検索を統合スコアリング
-- **Document Graph** — WikiLink (`[[target]]`) によるドキュメント間リンクをグラフ構造で管理
+- **Document Graph** — WikiLink (`[[target]]`) および通常Markdownリンク (`[text](./path.md)`) によるドキュメント間リンクをグラフ構造で管理
 - **ローカル埋め込み** — Xenova/multilingual-e5-large による日英バイリンガル対応 (外部API不要)
 - **MCP サーバー** — Claude Code / Claude Desktop / Cursor から直接利用可能
 - **リアルタイム同期** — ファイル変更を監視し差分更新
@@ -119,6 +119,17 @@ source_refs:
 特定セクションへのリンク: [[database-schema#FTS5設定]]
 エイリアス付き: [[search-algorithm|検索の仕組み]]
 ```
+
+### 通常Markdownリンク
+
+通常の Markdown リンクも `references` 型リンクとして自動的に取り込まれる。WikiLink を手動追記する必要なく、既存の Markdown リンクがそのままドキュメントグラフに反映される。
+
+```markdown
+詳細は [アーキテクチャ設計](./designs/architecture.md) を参照。
+```
+
+- 内部 `.md` ファイルへの相対リンクのみ対象（外部URL、アンカーのみ、非`.md`ファイルは無視）
+- 同じターゲットに WikiLink と Markdown リンクの両方がある場合、WikiLink が優先され重複排除される
 
 ## 設定
 

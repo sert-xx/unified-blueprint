@@ -31,7 +31,8 @@ ChangeProcessor
     ├── MarkdownParser (unified/remark)
     │     ├── FrontmatterParser (YAML)
     │     ├── SectionSplitter (H2/H3境界)
-    │     └── WikiLinkExtractor ([[target|type]])
+    │     ├── WikiLinkExtractor ([[target|type]])
+    │     └── MarkdownLinkExtractor ([text](./path.md))
     │
     ├── DocumentRepository.upsert()
     │     └── body_hash 比較で変更検出
@@ -85,7 +86,9 @@ unified/remarkパイプラインによるMarkdown解析。
 2. `remark-frontmatter`でフロントマター抽出
 3. `FrontmatterParser`でYAML解析・バリデーション
 4. `SectionSplitter`でセクション分割
-5. `WikiLinkExtractor`でリンク抽出
+5. `WikiLinkExtractor`でWikiLink抽出
+6. `MarkdownLinkExtractor`で通常Markdownリンク抽出
+7. WikiLinkとMarkdownリンクをマージ・重複排除（WikiLink優先）
 
 返却値: `ParseResult`（frontmatter, sections, links, title）
 
@@ -136,6 +139,17 @@ remarkプラグインとして動作し、`[[target]]`および`[[target|type]]`
 - リンク周辺50文字のコンテキストを抽出
 - 無効なリンク種別はwarning付きで`references`にフォールバック
 
+### MarkdownLinkExtractor
+
+remarkプラグインとして動作し、通常のMarkdownリンク`[text](./path.md)`から内部`.md`ファイルへのリンクを抽出する。
+
+- 外部URL（`http://`, `https://`, `mailto:`）、アンカーのみ（`#section`）、非`.md`ファイルは無視
+- アンカーフラグメントとクエリ文字列を除去してターゲットパスを解決
+- URLエンコード（`%20`等）をデコード
+- パストラバーサル防止（docs_dir外を指すパスはスキップ）
+- リンク種別は常に`references`
+- WikiLinkと同一ターゲットを指す場合はWikiLinkが優先され重複排除される
+
 ## 変更処理
 
 ### ChangeProcessor
@@ -147,7 +161,7 @@ remarkプラグインとして動作し、`[[target]]`および`[[target|type]]`
 1. **パース**: `MarkdownParser.parse(content)` → ParseResult
 2. **ドキュメントupsert**: body_hash比較。変更なしかつ`forceUpdate=false`ならスキップ
 3. **セクション置換**: `SectionRepository.replaceByDocId()` で差分更新。content_hashが一致するセクションはembeddingを保持
-4. **リンク解決**: `LinkResolver`でWikiLinkをファイルパスに変換。未解決はダングリングリンクとして保存
+4. **リンク解決**: `LinkResolver`でWikiLink・Markdownリンクをファイルパスに変換。解決後に同一ターゲット+同一種別のリンクを重複排除。未解決はダングリングリンクとして保存
 5. **ダングリングリンク再解決**: 新規ドキュメント追加時に既存のダングリングリンクをタイトル/ベースネームで再解決
 6. **source_refs同期**: ソースファイルのSHA-256ハッシュを計算・保存
 7. **Embeddingキュー投入**: embedding未生成またはcontent変更のセクションをキューに追加
@@ -163,7 +177,7 @@ remarkプラグインとして動作し、`[[target]]`および`[[target|type]]`
 
 ### LinkResolver
 
-WikiLinkのターゲット名からファイルパスを解決する。
+WikiLinkおよび通常Markdownリンクのターゲット名からファイルパスを解決する。
 
 **マッチング戦略**（優先順位順）:
 1. 完全パスマッチ（`path/to/file.md`）
