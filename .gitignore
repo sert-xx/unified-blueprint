@@ -2,3 +2,6 @@ node_modules/
 dist/
 .ubp/
 *.tsbuildinfo
+.claude/
+.idea/
+coverage/

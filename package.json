@@ -1,18 +1,42 @@
 {
-  "name": "@sert-xx/ubp",
+  "name": "ubp",
   "version": "0.1.0",
   "description": "Documentation-as-Code Middleware — Markdown docs to Document Graph for AI agents",
+  "author": "sert-xx <demo.sert@gmail.com>",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "ubp": "./dist/main.js"
   },
   "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "README.ja.md"
+  ],
+  "keywords": [
+    "mcp",
+    "documentation",
+    "knowledge-graph",
+    "semantic-search",
+    "ai-agent",
+    "document-graph",
+    "markdown",
+    "claude"
+  ],
+  "homepage": "https://github.com/sert-xx/unified-blueprint",
+  "bugs": {
+    "url": "https://github.com/sert-xx/unified-blueprint/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/sert-xx/unified-blueprint.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",

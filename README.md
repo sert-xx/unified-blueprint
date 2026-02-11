@@ -1,56 +1,68 @@
+[日本語](./README.ja.md)
+
 # UBP - Unified Blueprint
 
-Documentation-as-Code ミドルウェア。Markdown ドキュメントを Document Graph として構造化し、セマンティック検索・グラフ探索・全文検索を AI エージェントに提供する。
+[![npm version](https://img.shields.io/npm/v/ubp.svg)](https://www.npmjs.com/package/ubp)
+[![CI](https://github.com/sert-xx/unified-blueprint/actions/workflows/ci.yml/badge.svg)](https://github.com/sert-xx/unified-blueprint/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 
-## 特徴
+> Documentation-as-Code middleware that structures Markdown documents into a Document Graph, providing semantic search, graph traversal, and full-text search for AI agents.
 
-- **3-way ハイブリッド検索** — ベクトル検索 + グラフ探索 + FTS5 全文検索を統合スコアリング
-- **Document Graph** — WikiLink (`[[target]]`) および通常Markdownリンク (`[text](./path.md)`) によるドキュメント間リンクをグラフ構造で管理
-- **ローカル埋め込み** — Xenova/multilingual-e5-large による日英バイリンガル対応 (外部API不要)
-- **MCP サーバー** — Claude Code / Claude Desktop / Cursor から直接利用可能
-- **リアルタイム同期** — ファイル変更を監視し差分更新
-- **鮮度検出** — `source_refs` によるドキュメントとソースコードの整合性チェック
+UBP parses your Markdown documentation, builds a graph of inter-document relationships, generates local embeddings, and exposes a hybrid search API via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). AI coding assistants like Claude Code and Claude Desktop can query your docs directly through the MCP interface.
 
-## 必要環境
+## Features
+
+- **3-Way Hybrid Search** -- Vector similarity + graph proximity + FTS5 full-text search with unified scoring
+- **Document Graph** -- Manage inter-document links via WikiLinks (`[[target]]`) and standard Markdown links (`[text](./path.md)`)
+- **Local Embeddings** -- Bilingual (English/Japanese) support via Xenova/multilingual-e5-large with no external API required
+- **MCP Server** -- Directly usable from Claude Code, Claude Desktop, and Cursor
+- **Real-Time Sync** -- File watcher with incremental updates
+- **Staleness Detection** -- Check document-to-source-code consistency via `source_refs`
+
+## Prerequisites
 
 - Node.js >= 18.0.0
+- C++ compiler toolchain (required by `better-sqlite3` native addon)
+  - **macOS:** Xcode Command Line Tools (`xcode-select --install`)
+  - **Linux:** `build-essential` (`apt install build-essential`)
+  - **Windows:** Visual Studio Build Tools or `npm install -g windows-build-tools`
 
-## インストール
+## Installation
 
 ```bash
-npm install
-npm run build
+npm install -g ubp
 ```
 
-## クイックスタート
+## Quick Start
 
-### 1. プロジェクト初期化
+### 1. Initialize your project
 
 ```bash
 ubp init --docs-dir docs
 ```
 
-`docs/` 配下の Markdown ファイルをパース、セクション分割、リンク解決、埋め込み生成を行い `.ubp/ubp.db` に格納する。
+This parses Markdown files under `docs/`, splits them into sections, resolves links, generates embeddings, and stores everything in `.ubp/ubp.db`.
 
-### 2. 検索
+### 2. Search
 
 ```bash
-# セマンティック検索 (ハイブリッド)
-ubp search "検索アルゴリズムの仕組み"
+# Semantic search (hybrid)
+ubp search "how the search algorithm works"
 
-# 全文検索 (FTS5)
+# Full-text search (FTS5)
 ubp search "trigram" --fulltext
 ```
 
-### 3. MCP サーバー起動
+### 3. Start the MCP server
 
 ```bash
 ubp serve --no-lock
 ```
 
-## MCP 連携設定
+## MCP Integration
 
-`ubp init` 実行時に設定スニペットが表示される。
+Configuration snippets are displayed when you run `ubp init`.
 
 **Claude Code:**
 
@@ -72,68 +84,68 @@ claude mcp add ubp -- node dist/main.js serve --no-lock
 }
 ```
 
-## MCP ツール
+## MCP Tools
 
-| ツール | 説明 |
+| Tool | Description |
 |---|---|
-| `ubp_search` | セマンティック検索 (3-way ハイブリッド) |
-| `ubp_get_page` | ドキュメント全文取得 |
-| `ubp_get_context` | ドキュメント + 関連ドキュメント一括取得 |
-| `ubp_fulltext_search` | キーワード全文検索 (FTS5) |
-| `ubp_list_pages` | ドキュメント一覧 |
-| `ubp_get_graph` | ドキュメント間リンクグラフ |
+| `ubp_search` | Semantic search (3-way hybrid) |
+| `ubp_get_page` | Retrieve full document content |
+| `ubp_get_context` | Retrieve a document with its related documents |
+| `ubp_fulltext_search` | Keyword full-text search (FTS5) |
+| `ubp_list_pages` | List all documents |
+| `ubp_get_graph` | Document link graph |
 
-## CLI コマンド
+## CLI Commands
 
-| コマンド | 説明 |
+| Command | Description |
 |---|---|
-| `ubp init` | プロジェクト初期化 (パース・埋め込み生成) |
-| `ubp serve` | Watcher + MCP サーバーを起動 |
-| `ubp search <query>` | ハイブリッド検索 / 全文検索 |
-| `ubp status` | DB 統計情報の表示 |
-| `ubp stale` | 鮮度の低いドキュメントを検出 |
-| `ubp reindex` | 全ドキュメントを再インデックス |
-| `ubp suggest-links` | リンク候補を提案 |
-| `ubp version` | バージョン表示 |
+| `ubp init` | Initialize project (parse and generate embeddings) |
+| `ubp serve` | Start file watcher + MCP server |
+| `ubp search <query>` | Hybrid search / full-text search |
+| `ubp status` | Show database statistics |
+| `ubp stale` | Detect stale documents |
+| `ubp reindex` | Reindex all documents |
+| `ubp suggest-links` | Suggest link candidates |
+| `ubp version` | Show version |
 
-グローバルオプション: `--cwd <path>`, `--json`, `--verbose`, `--quiet`
+Global options: `--cwd <path>`, `--json`, `--verbose`, `--quiet`
 
-## Markdown 記法
+## Markdown Notation
 
 ### Frontmatter
 
 ```yaml
 ---
-title: ドキュメントタイトル
-tags: [設計, アーキテクチャ]
+title: Document Title
+tags: [design, architecture]
 source_refs:
   - src/core/engine.ts
   - src/data/database-manager.ts
 ---
 ```
 
-### WikiLink
+### WikiLinks
 
 ```markdown
-詳細は [[architecture]] を参照。
-特定セクションへのリンク: [[database-schema#FTS5設定]]
-エイリアス付き: [[search-algorithm|検索の仕組み]]
+See [[architecture]] for details.
+Link to a specific section: [[database-schema#FTS5-config]]
+With alias: [[search-algorithm|How search works]]
 ```
 
-### 通常Markdownリンク
+### Standard Markdown Links
 
-通常の Markdown リンクも `references` 型リンクとして自動的に取り込まれる。WikiLink を手動追記する必要なく、既存の Markdown リンクがそのままドキュメントグラフに反映される。
+Standard Markdown links are automatically captured as `references`-type links. There is no need to manually add WikiLinks -- existing Markdown links are reflected in the Document Graph as-is.
 
 ```markdown
-詳細は [アーキテクチャ設計](./designs/architecture.md) を参照。
+See [Architecture Design](./designs/architecture.md) for details.
 ```
 
-- 内部 `.md` ファイルへの相対リンクのみ対象（外部URL、アンカーのみ、非`.md`ファイルは無視）
-- 同じターゲットに WikiLink と Markdown リンクの両方がある場合、WikiLink が優先され重複排除される
+- Only relative links to internal `.md` files are captured (external URLs, anchor-only links, and non-`.md` files are ignored)
+- When both a WikiLink and a Markdown link point to the same target, the WikiLink takes precedence and duplicates are removed
 
-## 設定
+## Configuration
 
-`.ubp/config.json` で設定をカスタマイズできる。
+Customize settings in `.ubp/config.json`:
 
 ```json
 {
@@ -158,34 +170,41 @@ source_refs:
 }
 ```
 
-`search.alpha` は検索スコアの重み配分を制御する:
+`search.alpha` controls the score weight distribution:
 
 ```
-score = α × vector + β × graph + γ × fts5
-β = (1 - α) × 0.67,  γ = (1 - α) × 0.33
+score = alpha * vector + beta * graph + gamma * fts5
+beta = (1 - alpha) * 0.67,  gamma = (1 - alpha) * 0.33
 ```
 
-## アーキテクチャ
+## Architecture
 
 ```
 Interface Layer     CLI (commander.js) / MCP Server (stdio)
-        │
-Core Layer          UbpEngine ← Parser, Search, Graph, Staleness, Watcher
-        │
+        |
+Core Layer          UbpEngine <- Parser, Search, Graph, Staleness, Watcher
+        |
 Data Layer          DatabaseManager, Repositories, VectorIndex, FTS5
-        │
+        |
 Embedding Layer     LocalEmbeddingProvider (ONNX Runtime)
 ```
 
-## 開発
+## Development
 
 ```bash
-npm test              # テスト実行
-npm run test:watch    # ウォッチモード
-npm run typecheck     # 型チェック
-npm run build         # ビルド
+git clone https://github.com/sert-xx/unified-blueprint.git
+cd unified-blueprint
+npm install
+npm test              # Run tests
+npm run test:watch    # Watch mode
+npm run typecheck     # Type checking
+npm run build         # Build
 ```
 
-## ライセンス
+## Contributing
 
-MIT
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+## License
+
+[MIT](./LICENSE)
