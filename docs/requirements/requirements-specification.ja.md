@@ -1,3 +1,5 @@
+[English](./requirements-specification.md)
+
 # Unified Blueprint (UBP) 要件定義書
 
 **Version:** 1.0.0
@@ -425,76 +427,76 @@ npx ubp viewer
 ### 7.1 SQLiteスキーマ
 
 ```sql
--- プラグマ設定
+-- Pragma settings
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
-PRAGMA cache_size = -64000;         -- 64MB キャッシュ
-PRAGMA mmap_size = 268435456;       -- 256MB メモリマップ
+PRAGMA cache_size = -64000;         -- 64MB cache
+PRAGMA mmap_size = 268435456;       -- 256MB memory map
 PRAGMA temp_store = MEMORY;
 PRAGMA foreign_keys = ON;
 
--- ページ（ノード）テーブル
+-- Pages (node) table
 CREATE TABLE pages (
     id TEXT PRIMARY KEY,              -- UUID v7
-    title TEXT NOT NULL UNIQUE,       -- ページタイトル
-    file_path TEXT NOT NULL UNIQUE,   -- pages/ からの相対パス
-    body_hash TEXT,                   -- コンテンツのSHA-256ハッシュ（差分検出用）
+    title TEXT NOT NULL UNIQUE,       -- Page title
+    file_path TEXT NOT NULL UNIQUE,   -- Relative path from pages/
+    body_hash TEXT,                   -- SHA-256 hash of content (for diff detection)
     created_at TEXT NOT NULL,         -- ISO 8601
     updated_at TEXT NOT NULL          -- ISO 8601
 );
 
--- リンク（エッジ）テーブル
+-- Links (edge) table
 CREATE TABLE links (
     source_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
     target_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    type TEXT NOT NULL DEFAULT 'reference',  -- エッジ型（MVP: referenceのみ）
-    context TEXT,                     -- リンクが出現した文脈（前後50文字）
+    type TEXT NOT NULL DEFAULT 'reference',  -- Edge type (MVP: reference only)
+    context TEXT,                     -- Context where link appears (50 chars before/after)
     created_at TEXT NOT NULL,
     PRIMARY KEY (source_page_id, target_page_id)
 );
 
--- ベクトルテーブル
+-- Vectors table
 CREATE TABLE page_vectors (
     page_id TEXT PRIMARY KEY REFERENCES pages(id) ON DELETE CASCADE,
-    embedding BLOB NOT NULL,          -- Float32Array のバイナリ表現（384次元 x 4bytes = 1536bytes）
-    model_version TEXT NOT NULL,      -- Embeddingモデルのバージョン
-    source_hash TEXT NOT NULL,        -- ベクトル化時のbody_hash（差分更新判定用）
+    embedding BLOB NOT NULL,          -- Float32Array binary (384 dimensions x 4 bytes = 1536 bytes)
+    model_version TEXT NOT NULL,      -- Embedding model version
+    source_hash TEXT NOT NULL,        -- body_hash at vectorization time (for incremental updates)
     updated_at TEXT NOT NULL
 );
 
--- インデックス
+-- Indexes
 CREATE INDEX idx_pages_title ON pages(title);
 CREATE INDEX idx_pages_updated_at ON pages(updated_at);
 CREATE INDEX idx_links_target ON links(target_page_id);
 CREATE INDEX idx_links_type ON links(type);
 CREATE INDEX idx_vectors_model ON page_vectors(model_version);
 
--- ソースコード参照の鮮度追跡テーブル（Staleness Detection用）
+-- Source code reference freshness tracking table (for Staleness Detection)
 CREATE TABLE source_refs_state (
     page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    file_path TEXT NOT NULL,               -- ソースコードファイルのパス
-    last_synced_hash TEXT,                 -- 最後に同期確認したファイルのSHA-256ハッシュ
-    last_synced_at TEXT,                   -- 最後に同期確認した日時（ISO 8601）
-    is_stale BOOLEAN NOT NULL DEFAULT 0,   -- 鮮度フラグ
+    file_path TEXT NOT NULL,               -- Source code file path
+    last_synced_hash TEXT,                 -- SHA-256 hash at last sync check
+    last_synced_at TEXT,                   -- Last sync check time (ISO 8601)
+    is_stale BOOLEAN NOT NULL DEFAULT 0,   -- Freshness flag
     PRIMARY KEY (page_id, file_path)
 );
 
--- 暗黙リンク提案テーブル
+-- Implicit link suggestion table
 CREATE TABLE suggested_links (
     source_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
     target_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    similarity_score REAL NOT NULL,        -- ベクトル類似度スコア
+    similarity_score REAL NOT NULL,        -- Vector similarity score
     status TEXT NOT NULL DEFAULT 'pending', -- pending / accepted / dismissed
     suggested_at TEXT NOT NULL,             -- ISO 8601
-    resolved_at TEXT,                       -- 承認/却下した日時
+    resolved_at TEXT,                       -- Accepted/dismissed time
     PRIMARY KEY (source_page_id, target_page_id)
 );
 
--- インデックス（追加分）
+-- Additional indexes
 CREATE INDEX idx_source_refs_stale ON source_refs_state(is_stale) WHERE is_stale = 1;
 CREATE INDEX idx_suggested_links_status ON suggested_links(status);
 
--- FTS5 全文検索
+-- FTS5 full-text search
 CREATE VIRTUAL TABLE pages_fts USING fts5(
     title,
     body,

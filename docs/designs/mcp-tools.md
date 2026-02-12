@@ -1,5 +1,5 @@
 ---
-title: MCPツール仕様
+title: MCP Tool Specification
 doc_type: api
 source_refs:
   - src/interface/mcp/server.ts
@@ -12,35 +12,37 @@ source_refs:
   - src/interface/mcp/tools/ubp-get-graph.ts
 ---
 
-# MCPツール仕様
+[日本語](./mcp-tools.ja.md)
 
-Model Context Protocol（MCP）で公開するツール群を定義する。`@modelcontextprotocol/sdk`を使用し、stdio経由でAIエージェント（Claude Desktop、Cursor等）と連携する。
+# MCP Tool Specification
 
-## MCPサーバー構成
+Defines the tools exposed via Model Context Protocol (MCP). Uses `@modelcontextprotocol/sdk` and integrates with AI agents (Claude Desktop, Cursor, etc.) via stdio.
 
-MCPサーバーは`ubp serve`コマンドで起動する。stdioトランスポートを使用し、プロセスロック（`.ubp/serve.lock`）で多重起動を防止する。ファイル監視を同時に開始し、ドキュメント変更をリアルタイムでインデックスに反映する。
+## MCP Server Configuration
 
-エラー応答はJSON-RPC形式で返し、スタックトレースは含めない。MCPエラーコード:
-- `-32602`: 無効なパラメータ
-- `-32603`: 内部エラー
+The MCP server is started with the `ubp serve` command. It uses stdio transport and prevents multiple instances with a process lock (`.ubp/serve.lock`). File watching starts simultaneously, reflecting document changes in the index in real time.
 
-## ツール一覧
+Error responses are returned in JSON-RPC format without stack traces. MCP error codes:
+- `-32602`: Invalid parameters
+- `-32603`: Internal error
+
+## Tool List
 
 ### ubp_search
 
-Graph-Awareセマンティック検索を実行する。ベクトル類似度・グラフ近接度・FTS5スコアを統合した3-Wayハイブリッドスコアリングで最適な結果を返す。
+Executes a Graph-Aware semantic search. Returns optimal results using 3-way hybrid scoring that combines vector similarity, graph proximity, and FTS5 scores.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | デフォルト | 説明 |
+| Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `query` | string | Yes | - | 検索クエリテキスト |
-| `limit` | number | No | 10 | 返却件数上限（1〜20） |
-| `include_linked` | boolean | No | false | 関連ページの展開 |
-| `depth` | number | No | 2 | グラフ走査深度（1〜3） |
-| `link_types` | string[] | No | - | リンク種別フィルタ |
+| `query` | string | Yes | - | Search query text |
+| `limit` | number | No | 10 | Maximum number of results (1-20) |
+| `include_linked` | boolean | No | false | Expand linked pages |
+| `depth` | number | No | 2 | Graph traversal depth (1-3) |
+| `link_types` | string[] | No | - | Link type filter |
 
-**レスポンス**: `SearchOutput`
+**Response**: `SearchOutput`
 
 ```typescript
 {
@@ -60,19 +62,19 @@ Graph-Awareセマンティック検索を実行する。ベクトル類似度・
 }
 ```
 
-実装は[[search-algorithm|implements]]に基づく。
+Implementation is based on [[search-algorithm|the search algorithm]].
 
 ### ubp_get_page
 
-指定されたファイルパスのドキュメントを取得する。全セクションの内容、アウトリンク、バックリンク、陳腐化状態を含む完全な情報を返す。
+Retrieves a document at the specified file path. Returns complete information including all section contents, outlinks, backlinks, and staleness status.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | 説明 |
+| Name | Type | Required | Description |
 |---|---|---|---|
-| `filepath` | string | Yes | ドキュメントのファイルパス（docs_dirからの相対パス） |
+| `filepath` | string | Yes | Document file path (relative to docs_dir) |
 
-**レスポンス**: `GetPageOutput`
+**Response**: `GetPageOutput`
 
 ```typescript
 {
@@ -80,29 +82,29 @@ Graph-Awareセマンティック検索を実行する。ベクトル類似度・
   filepath: string,
   title: string,
   doc_type: DocType,
-  content: string,               // 全セクション結合テキスト
+  content: string,               // concatenated text of all sections
   sections: [{ heading, content }],
   outlinks: [{ doc_id, filepath, title, link_type }],
   backlinks: [{ doc_id, filepath, title, link_type }],
   staleness: StalenessLevel,
-  stale_refs: string[],          // 陳腐化したソースファイルパス
+  stale_refs: string[],          // source file paths that are stale
   updated_at: string
 }
 ```
 
 ### ubp_get_context
 
-ドキュメントとそのグラフ近傍をまとめて取得する。AIエージェントがコンテキストウィンドウに必要な情報を効率的に取得できるよう設計されている。
+Retrieves a document along with its graph neighborhood. Designed for AI agents to efficiently retrieve the information needed for their context window.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | デフォルト | 説明 |
+| Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `filepath` | string | Yes | - | 中心ドキュメントのファイルパス |
-| `depth` | number | No | 2 | グラフ走査深度（1〜3） |
-| `max_size` | number | No | 50000 | 最大出力文字数 |
+| `filepath` | string | Yes | - | File path of the center document |
+| `depth` | number | No | 2 | Graph traversal depth (1-3) |
+| `max_size` | number | No | 50000 | Maximum output character count |
 
-**レスポンス**: `GetContextOutput`
+**Response**: `GetContextOutput`
 
 ```typescript
 {
@@ -110,7 +112,7 @@ Graph-Awareセマンティック検索を実行する。ベクトル類似度・
     doc_id: string,
     filepath: string,
     title: string,
-    content: string                // 全セクション結合テキスト
+    content: string                // concatenated text of all sections
   },
   related: [{
     doc_id: string,
@@ -118,29 +120,29 @@ Graph-Awareセマンティック検索を実行する。ベクトル類似度・
     title: string,
     link_type: LinkType,
     direction: 'outlink' | 'backlink',
-    summary: string,               // 先頭500文字
+    summary: string,               // first 500 characters
     depth: number
   }],
   total_size: number,
-  truncated_count: number          // max_sizeで省略されたドキュメント数
+  truncated_count: number          // number of documents omitted due to max_size
 }
 ```
 
-`max_size`を超える場合、関連ドキュメントを省略し`truncated_count`で通知する。
+When `max_size` is exceeded, related documents are omitted and `truncated_count` indicates the count.
 
 ### ubp_fulltext_search
 
-FTS5による全文キーワード検索。trigramトークナイザーにより日本語のサブストリング検索にも対応する。Embeddingが利用できない場合の代替手段としても機能する。
+Full-text keyword search using FTS5. Supports Japanese substring search via the trigram tokenizer. Also functions as a fallback when embeddings are unavailable.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | デフォルト | 説明 |
+| Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `query` | string | Yes | - | 検索キーワード |
-| `limit` | number | No | 10 | 返却件数上限（1〜50） |
-| `doc_type` | string | No | - | ドキュメント種別フィルタ |
+| `query` | string | Yes | - | Search keyword |
+| `limit` | number | No | 10 | Maximum number of results (1-50) |
+| `doc_type` | string | No | - | Document type filter |
 
-**レスポンス**: `FulltextSearchOutput`
+**Response**: `FulltextSearchOutput`
 
 ```typescript
 {
@@ -149,7 +151,7 @@ FTS5による全文キーワード検索。trigramトークナイザーにより
     filepath: string,
     title: string,
     section_heading: string | null,
-    snippet: string,               // 64文字のハイライト付きスニペット
+    snippet: string,               // 64-character highlighted snippet
     rank: number
   }],
   total_found: number
@@ -158,17 +160,17 @@ FTS5による全文キーワード検索。trigramトークナイザーにより
 
 ### ubp_list_pages
 
-インデックス済みの全ドキュメントを一覧する。ドキュメント種別でのフィルタリングと、タイトル・更新日時・ファイルパスでのソートに対応する。
+Lists all indexed documents. Supports filtering by document type and sorting by title, updated_at, or filepath.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | デフォルト | 説明 |
+| Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `doc_type` | string | No | - | ドキュメント種別フィルタ |
-| `sort` | string | No | `"title"` | ソートキー: title / updated_at / filepath |
-| `order` | string | No | `"asc"` | ソート順: asc / desc |
+| `doc_type` | string | No | - | Document type filter |
+| `sort` | string | No | `"title"` | Sort key: title / updated_at / filepath |
+| `order` | string | No | `"asc"` | Sort order: asc / desc |
 
-**レスポンス**: `ListPagesOutput`
+**Response**: `ListPagesOutput`
 
 ```typescript
 {
@@ -186,16 +188,16 @@ FTS5による全文キーワード検索。trigramトークナイザーにより
 
 ### ubp_get_graph
 
-ドキュメントグラフの構造（ノードとエッジ）を返す。全体グラフまたは特定ドキュメントを中心としたサブグラフを取得できる。
+Returns the document graph structure (nodes and edges). Can retrieve the full graph or a subgraph centered on a specific document.
 
-**パラメータ**:
+**Parameters**:
 
-| 名前 | 型 | 必須 | デフォルト | 説明 |
+| Name | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `center` | string | No | - | 中心ドキュメント（filepath or doc_id） |
-| `depth` | number | No | 2 | グラフ走査深度（1〜5） |
+| `center` | string | No | - | Center document (filepath or doc_id) |
+| `depth` | number | No | 2 | Graph traversal depth (1-5) |
 
-**レスポンス**: `GetGraphOutput`
+**Response**: `GetGraphOutput`
 
 ```typescript
 {
@@ -208,35 +210,35 @@ FTS5による全文キーワード検索。trigramトークナイザーにより
   edges: [{
     source: string,              // source doc_id
     target: string,              // target doc_id
-    type: LinkType               // リンク種別
+    type: LinkType               // link type
   }]
 }
 ```
 
-`center`未指定の場合は全ドキュメントのグラフを返す。[[database-schema]]のlinksテーブルから構築される。
+When `center` is not specified, returns the graph of all documents. Built from the links table in [[database-schema]].
 
-## AIエージェント向け利用パターン
+## Usage Patterns for AI Agents
 
-### コンテキスト収集
-
-```
-1. ubp_search("検索クエリ") → 関連ドキュメント特定
-2. ubp_get_context(filepath, depth=2) → 中心 + 関連ドキュメント取得
-3. コンテキストウィンドウに投入して回答生成
-```
-
-### ドキュメント探索
+### Context Gathering
 
 ```
-1. ubp_list_pages(doc_type="design") → 設計ドキュメント一覧
-2. ubp_get_page(filepath) → 詳細閲覧
-3. ubp_get_graph(center=filepath) → 依存関係確認
+1. ubp_search("search query") -> identify relevant documents
+2. ubp_get_context(filepath, depth=2) -> retrieve center + related documents
+3. Feed into context window and generate response
 ```
 
-### 鮮度チェック
+### Document Exploration
 
 ```
-1. ubp_get_page(filepath) → staleness + stale_refs 確認
-2. 陳腐化の原因となるソースファイルの変更内容を確認
-3. ドキュメント更新を提案
+1. ubp_list_pages(doc_type="design") -> list design documents
+2. ubp_get_page(filepath) -> view details
+3. ubp_get_graph(center=filepath) -> check dependencies
+```
+
+### Freshness Check
+
+```
+1. ubp_get_page(filepath) -> check staleness + stale_refs
+2. Review changes in source files causing staleness
+3. Suggest document updates
 ```
