@@ -54,7 +54,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "better-sqlite3": "^12.6.2",
-    "chokidar": "^4.0.0",
+    "chokidar": "^5.0.0",
     "commander": "^14.0.3",
     "picocolors": "^1.1.0",
     "remark-frontmatter": "^5.0.0",
