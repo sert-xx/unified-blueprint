@@ -1,5 +1,5 @@
 ---
-title: CLIコマンド設計
+title: CLI Command Design
 doc_type: guide
 source_refs:
   - src/interface/cli/index.ts
@@ -12,45 +12,47 @@ source_refs:
   - src/interface/cli/commands/suggest-links.ts
 ---
 
-# CLIコマンド設計
+[日本語](./cli-commands.ja.md)
 
-Unified Blueprintが提供するコマンドラインインターフェースの設計。Commander.jsを使用し、8つのコマンドを提供する。
+# CLI Command Design
 
-## グローバルオプション
+Design of the command-line interface provided by Unified Blueprint. Uses Commander.js and offers 8 commands.
 
-全コマンド共通のオプション:
+## Global Options
 
-| オプション | 短縮 | 説明 |
+Options common to all commands:
+
+| Option | Short | Description |
 |---|---|---|
-| `--cwd <path>` | - | プロジェクトルートの指定（デフォルト: カレントディレクトリ） |
-| `--log-level <level>` | - | ログレベル: debug / info / warn / error |
+| `--cwd <path>` | - | Specify project root (default: current directory) |
+| `--log-level <level>` | - | Log level: debug / info / warn / error |
 
 ## ubp init
 
-プロジェクトの初期化を行う。ドキュメントディレクトリをスキャンし、全ファイルをパースしてインデックスを構築する。
+Initializes the project. Scans the document directory, parses all files, and builds the index.
 
-### オプション
+### Options
 
-| オプション | 短縮 | デフォルト | 説明 |
+| Option | Short | Default | Description |
 |---|---|---|---|
-| `--docs-dir <path>` | `-d` | `docs` | ドキュメントディレクトリ |
-| `--include <patterns>` | `-i` | `**/*.md` | 対象ファイルパターン（カンマ区切り） |
-| `--exclude <patterns>` | `-e` | `node_modules,dist,.git` | 除外パターン（カンマ区切り） |
-| `--skip-embedding` | - | false | Embedding生成をスキップ |
+| `--docs-dir <path>` | `-d` | `docs` | Document directory |
+| `--include <patterns>` | `-i` | `**/*.md` | Target file patterns (comma-separated) |
+| `--exclude <patterns>` | `-e` | `node_modules,dist,.git` | Exclusion patterns (comma-separated) |
+| `--skip-embedding` | - | false | Skip embedding generation |
 
-### 処理フロー
+### Processing Flow
 
-1. `.ubp/`ディレクトリと`config.json`を作成
-2. SQLiteデータベースを初期化（マイグレーション適用）
-3. Embeddingモデルをダウンロード（初回のみ、`--skip-embedding`指定時はスキップ）
-4. ドキュメントディレクトリをスキャンし、全`.md`ファイルを処理
-5. パース → セクション分割 → リンク解決 → DB保存
-6. Embedding生成をバックグラウンドキューで開始
-7. 結果サマリーを表示
+1. Create `.ubp/` directory and `config.json`
+2. Initialize SQLite database (apply migrations)
+3. Download embedding model (first time only, skipped with `--skip-embedding`)
+4. Scan document directory and process all `.md` files
+5. Parse -> section splitting -> link resolution -> save to DB
+6. Start embedding generation on background queue
+7. Display result summary
 
-### オンボーディング
+### Onboarding
 
-初回実行時にMCPサーバーの設定スニペットを表示し、Claude DesktopやCursorとの連携方法を案内する。
+On first run, displays an MCP server configuration snippet and guides the user on how to integrate with Claude Desktop or Cursor.
 
 ```json
 {
@@ -66,62 +68,62 @@ Unified Blueprintが提供するコマンドラインインターフェースの
 
 ## ubp serve
 
-MCPサーバーをstdio経由で起動する。ファイル監視を同時に開始し、ドキュメント変更をリアルタイムでインデックスに反映する。
+Starts the MCP server via stdio. Simultaneously begins file watching and reflects document changes in the index in real time.
 
-### オプション
+### Options
 
-| オプション | 短縮 | 説明 |
+| Option | Short | Description |
 |---|---|---|
-| `--skip-embedding` | - | Embedding生成をスキップ（FTS5フォールバックで動作） |
+| `--skip-embedding` | - | Skip embedding generation (operates with FTS5 fallback) |
 
-### 動作仕様
+### Behavior
 
-- stdioトランスポートでMCPプロトコルを提供
-- プロセスロック（`.ubp/serve.lock`）で多重起動を防止
-- 既存プロセスが検出された場合はPIDを表示してエラー終了
-- SIGINT/SIGTERM受信時にグレースフルシャットダウン（ロック解放、DB切断）
-- ファイル監視による変更の自動反映（デバウンス500ms）
-- Embeddingプロバイダー初期化失敗時はFTS5フォールバックで動作継続
+- Provides MCP protocol via stdio transport
+- Prevents multiple instances with process lock (`.ubp/serve.lock`)
+- If an existing process is detected, displays the PID and exits with an error
+- Graceful shutdown on SIGINT/SIGTERM (releases lock, disconnects DB)
+- Automatic change detection via file watching (500ms debounce)
+- If embedding provider initialization fails, continues operation with FTS5 fallback
 
 ## ubp search
 
-ドキュメントの検索を実行する。
+Executes document search.
 
-### オプション
+### Options
 
-| オプション | 短縮 | デフォルト | 説明 |
+| Option | Short | Default | Description |
 |---|---|---|---|
-| `--limit <n>` | `-l` | 10 | 返却件数上限 |
-| `--fulltext` | `-f` | false | FTS5全文検索に切り替え |
-| `--doc-type <type>` | `-t` | - | ドキュメント種別フィルタ |
-| `--json` | - | false | JSON形式で出力 |
+| `--limit <n>` | `-l` | 10 | Maximum number of results |
+| `--fulltext` | `-f` | false | Switch to FTS5 full-text search |
+| `--doc-type <type>` | `-t` | - | Document type filter |
+| `--json` | - | false | Output in JSON format |
 
-### 使用例
+### Examples
 
 ```bash
-# ハイブリッド検索
-ubp search "ドキュメント間の依存関係"
+# Hybrid search
+ubp search "dependencies between documents"
 
-# FTS5全文検索
+# FTS5 full-text search
 ubp search --fulltext "WikiLink"
 
-# JSON出力
-ubp search --json --limit 5 "検索アルゴリズム"
+# JSON output
+ubp search --json --limit 5 "search algorithm"
 ```
 
-検索アルゴリズムの詳細は[[search-algorithm]]を参照。
+See [[search-algorithm]] for details on the search algorithm.
 
 ## ubp status
 
-プロジェクトの状態を表示する。
+Displays project status.
 
-### オプション
+### Options
 
-| オプション | 説明 |
+| Option | Description |
 |---|---|
-| `--json` | JSON形式で出力 |
+| `--json` | Output in JSON format |
 
-### 出力内容
+### Output
 
 ```typescript
 {
@@ -142,67 +144,67 @@ ubp search --json --limit 5 "検索アルゴリズム"
 }
 ```
 
-テーブル形式のデフォルト出力では、上記の情報を人間可読な形式で表示する。
+The default table-format output displays the above information in a human-readable format.
 
 ## ubp reindex
 
-インデックスの再構築を行う。
+Rebuilds the index.
 
-### オプション
+### Options
 
-| オプション | 短縮 | 説明 |
+| Option | Short | Description |
 |---|---|---|
-| `--force` | `-f` | 変更がなくても全ファイルを再処理 |
-| `--file <path>` | - | 指定ファイルのみを再インデックス |
-| `--skip-embedding` | - | Embedding再生成をスキップ |
+| `--force` | `-f` | Reprocess all files even if unchanged |
+| `--file <path>` | - | Reindex only the specified file |
+| `--skip-embedding` | - | Skip embedding regeneration |
 
-### 差分更新
+### Incremental Updates
 
-デフォルトでは`body_hash`と`content_hash`で変更を検出し、変更されたドキュメント・セクションのみを再処理する。Embeddingは`content_hash`が変更されたセクションのみ再生成される。
+By default, changes are detected using `body_hash` and `content_hash`, and only modified documents and sections are reprocessed. Embeddings are regenerated only for sections whose `content_hash` has changed.
 
-`--force`を指定すると全ファイルを強制的に再処理する。モデル変更後の全Embedding再生成に使用する。
+With `--force`, all files are forcefully reprocessed. Use this for full embedding regeneration after a model change.
 
-ディスク上に存在しなくなったドキュメントはデータベースから自動削除される。
+Documents that no longer exist on disk are automatically deleted from the database.
 
 ## ubp stale
 
-陳腐化ドキュメントを一覧する。[[staleness-detection]]のsource_refsメカニズムに基づく。
+Lists stale documents. Based on the source_refs mechanism of [[staleness-detection]].
 
-### オプション
+### Options
 
-| オプション | 説明 |
+| Option | Description |
 |---|---|
-| `--json` | JSON形式で出力 |
-| `--exit-code` | 陳腐化ドキュメントが存在する場合exit code 1で終了 |
+| `--json` | Output in JSON format |
+| `--exit-code` | Exit with code 1 if stale documents exist |
 
-### 出力
+### Output
 
-各陳腐化ドキュメントについて、以下の情報を表示する:
-- ファイルパス
-- タイトル
-- 陳腐化レベル（stale / untracked）
-- 陳腐化の原因となったsource_ref一覧と理由（modified / deleted / not_found）
+For each stale document, the following information is displayed:
+- File path
+- Title
+- Staleness level (stale / untracked)
+- List of source_refs causing staleness and their reasons (modified / deleted / not_found)
 
-### CI利用例
+### CI Usage Example
 
 ```bash
-# プルリクエストのチェックに組み込む
+# Integrate into pull request checks
 ubp stale --exit-code || echo "Stale documents found!"
 ```
 
 ## ubp suggest-links
 
-ベクトル類似度に基づくドキュメント間のリンク提案を生成する。WikiLinkが未設定だが意味的に関連するドキュメントペアを検出する。
+Generates link suggestions between documents based on vector similarity. Detects document pairs that are semantically related but lack WikiLinks.
 
-### オプション
+### Options
 
-| オプション | 短縮 | デフォルト | 説明 |
+| Option | Short | Default | Description |
 |---|---|---|---|
-| `--threshold <n>` | `-t` | 0.5 | 類似度閾値（0.0〜1.0） |
-| `--limit <n>` | `-l` | 20 | 提案数上限 |
-| `--json` | - | false | JSON形式で出力 |
+| `--threshold <n>` | `-t` | 0.5 | Similarity threshold (0.0-1.0) |
+| `--limit <n>` | `-l` | 20 | Maximum number of suggestions |
+| `--json` | - | false | Output in JSON format |
 
-### 出力
+### Output
 
 ```typescript
 {
@@ -210,7 +212,7 @@ ubp stale --exit-code || echo "Stale documents found!"
     source_filepath: string,
     target_filepath: string,
     similarity: number,
-    source_section: string,    // 関連セクションの見出し
+    source_section: string,    // heading of the related section
     target_section: string
   }],
   total: number
@@ -219,22 +221,22 @@ ubp stale --exit-code || echo "Stale documents found!"
 
 ## ubp version
 
-UBPのバージョン情報を表示する。`package.json`のversionフィールドを参照する。
+Displays UBP version information. References the version field in `package.json`.
 
-## CLI出力フォーマット
+## CLI Output Format
 
-### テーブル出力
+### Table Output
 
-デフォルトのCLI出力はpicocolorsを使用した色付きテーブル形式。検索結果のスコア、陳腐化レベル等を視覚的に表示する。
+The default CLI output uses picocolors for colored table formatting. Visually displays search result scores, staleness levels, etc.
 
-### JSON出力
+### JSON Output
 
-`--json`オプションを指定すると、全てのコマンドがJSON形式で出力する。パイプライン処理やスクリプトからの利用に対応する。
+When the `--json` option is specified, all commands output in JSON format. Supports pipeline processing and scripting use cases.
 
-### プログレス表示
+### Progress Display
 
-ファイル処理やEmbedding生成の進捗はスピナーとプログレスバーで表示する。
+File processing and embedding generation progress are shown with spinners and progress bars.
 
-### エラー表示
+### Error Display
 
-エラーメッセージは赤色で表示し、可能な場合は解決方法のヒントを提示する。スタックトレースは`--log-level debug`指定時のみ表示する。
+Error messages are displayed in red, with resolution hints provided when possible. Stack traces are shown only when `--log-level debug` is specified.

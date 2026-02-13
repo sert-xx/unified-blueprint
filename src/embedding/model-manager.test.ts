@@ -21,7 +21,7 @@ describe('ModelManager', () => {
     it('uses default cache dir when not specified', () => {
       const manager = new ModelManager();
       const cacheDir = manager.getCacheDir();
-      expect(cacheDir).toContain('.cache/ubp/models');
+      expect(cacheDir.replace(/\\/g, '/')).toContain('.cache/ubp/models');
     });
 
     it('uses custom cache dir', () => {

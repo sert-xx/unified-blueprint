@@ -162,7 +162,7 @@ describe('EmbeddingQueue', () => {
       });
 
       // Make first embed call fail, second succeed
-      let callCount = 0;
+      const callCount = 0;
       vi.mocked(provider.embedBatch).mockRejectedValueOnce(
         new Error('batch failed'),
       );
