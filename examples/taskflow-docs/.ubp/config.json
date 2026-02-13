@@ -1,0 +1,26 @@
+{
+  "docs_dir": ".",
+  "source": {
+    "include": [
+      "**/*.md"
+    ],
+    "exclude": []
+  },
+  "embedding": {
+    "model": "Xenova/multilingual-e5-large",
+    "dimensions": 1024,
+    "batch_size": 32
+  },
+  "search": {
+    "alpha": 0.7,
+    "default_limit": 10,
+    "max_depth": 2
+  },
+  "staleness": {
+    "threshold_days": 7
+  },
+  "log": {
+    "level": "info",
+    "file": null
+  }
+}
