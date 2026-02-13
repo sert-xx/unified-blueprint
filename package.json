@@ -60,7 +60,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.0",
-    "uuid": "^11.1.0",
+    "uuid": "^13.0.0",
     "yaml": "^2.7.0",
     "zod": "^3.24.0"
   },
