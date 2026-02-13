@@ -1,5 +1,5 @@
 ---
-title: 非同期パイプライン設計
+title: Async Pipeline Design
 doc_type: design
 source_refs:
   - src/core/watcher/file-watcher.ts
@@ -10,102 +10,104 @@ source_refs:
   - src/core/parser/section-splitter.ts
 ---
 
-# 非同期パイプライン設計
+[日本語](./async-pipeline.ja.md)
 
-ファイル変更の検出からEmbedding生成までの非同期パイプラインを定義する。
+# Async Pipeline Design
 
-## 全体フロー
+Defines the async pipeline from file change detection through embedding generation.
+
+## Overall Flow
 
 ```
-ファイル変更
+File Change
     │
     ▼
 FileWatcher (chokidar)
-    │  add / change / unlink イベント
+    │  add / change / unlink events
     ▼
 Debouncer (500ms)
-    │  バッチ化された変更
+    │  Batched changes
     ▼
 ChangeProcessor
     │
     ├── MarkdownParser (unified/remark)
     │     ├── FrontmatterParser (YAML)
-    │     ├── SectionSplitter (H2/H3境界)
+    │     ├── SectionSplitter (H2/H3 boundaries)
     │     ├── WikiLinkExtractor ([[target|type]])
     │     └── MarkdownLinkExtractor ([text](./path.md))
     │
     ├── DocumentRepository.upsert()
-    │     └── body_hash 比較で変更検出
+    │     └── Change detection via body_hash comparison
     │
     ├── SectionRepository.replaceByDocId()
-    │     └── content_hash 比較で差分更新
+    │     └── Differential update via content_hash comparison
     │
     ├── LinkResolver.resolve()
-    │     ├── ファイルパスマッチング
-    │     └── ダングリングリンク自動解決
+    │     ├── File path matching
+    │     └── Automatic dangling link resolution
     │
     ├── SourceRefsState.sync()
-    │     └── SHA-256ハッシュ更新
+    │     └── SHA-256 hash update
     │
     └── EmbeddingQueue.enqueue()
-          │  新規・変更セクションのみ
+          │  New/changed sections only
           ▼
-    EmbeddingQueue (非同期バッチ処理)
-          │  バッチサイズ: 32
+    EmbeddingQueue (async batch processing)
+          │  Batch size: 32
           ▼
     VectorIndex.upsert() + SectionRepository.updateEmbedding()
 ```
 
-## ファイル監視
+## File Watching
 
 ### FileWatcher
 
-chokidarによるファイルシステム監視。
+File system monitoring via chokidar.
 
-- **監視対象**: `config.docs_dir`配下の`*.md`ファイル
-- **除外パターン**: `config.source.exclude`（デフォルト: `node_modules`, `dist`, `.git`）
-- **イベント**: `add`（新規）、`change`（変更）、`unlink`（削除）
-- **パストラバーサル防止**: `docs_dir`の外を指すパスは無視
+- **Watch targets**: `*.md` files under `config.docs_dir`
+- **Exclude patterns**: `config.source.exclude` (default: `node_modules`, `dist`, `.git`)
+- **Events**: `add` (new), `change` (modified), `unlink` (deleted)
+- **Path traversal prevention**: Paths pointing outside `docs_dir` are ignored
 
 ### Debouncer
 
-短時間の連続変更をバッチ化する。
+Batches rapid successive changes.
 
-- **デバウンス間隔**: 500ms
-- 同一ファイルへの連続変更は最後のイベントのみ処理
-- ファイル保存時の一時ファイル書き込み等のノイズを排除
+- **Debounce interval**: 500ms
+- Successive changes to the same file process only the last event
+- Eliminates noise from temporary file writes during file saves
 
-## Markdownパース
+## Markdown Parsing
 
 ### MarkdownParser
 
-unified/remarkパイプラインによるMarkdown解析。
+Markdown analysis via the unified/remark pipeline.
 
-処理順序:
-1. `remark-parse`でAST生成
-2. `remark-frontmatter`でフロントマター抽出
-3. `FrontmatterParser`でYAML解析・バリデーション
-4. `SectionSplitter`でセクション分割
-5. `WikiLinkExtractor`でWikiLink抽出
-6. `MarkdownLinkExtractor`で通常Markdownリンク抽出
-7. WikiLinkとMarkdownリンクをマージ・重複排除（WikiLink優先）
+Processing order:
+1. Generate AST with `remark-parse`
+2. Extract frontmatter with `remark-frontmatter`
+3. Parse and validate YAML with `FrontmatterParser`
+4. Split sections with `SectionSplitter`
+5. Extract WikiLinks with `WikiLinkExtractor`
+6. Extract standard Markdown links with `MarkdownLinkExtractor`
+7. Merge WikiLinks and Markdown links with deduplication (WikiLinks take priority)
 
-返却値: `ParseResult`（frontmatter, sections, links, title）
+Return value: `ParseResult` (frontmatter, sections, links, title)
 
-### タイトル解決
+### Title Resolution
 
-タイトルの優先順位:
-1. フロントマターの`title`フィールド
-2. 本文中の最初のH1見出し
-3. ファイル名（拡張子除去）
+Title priority:
+1. The `title` field in frontmatter
+2. The first H1 heading in the body
+3. The filename (without extension)
 
 ### FrontmatterParser
 
-YAMLフロントマターの解析とバリデーション。
+YAML frontmatter parsing and validation.
 
 ```yaml
 ---
-title: ドキュメントタイトル
+title: Document Title
 doc_type: design
 source_refs:
   - src/core/engine.ts
@@ -113,102 +115,102 @@ source_refs:
 ---
 ```
 
-- `doc_type`: 不正な値はwarning付きで`other`にフォールバック
-- `source_refs`: 各パスに対してパストラバーサルチェック（`..`を含むパスは警告して除外）
-- 未定義フィールドは無視する（厳密なスキーマ検証は行わない）
+- `doc_type`: Invalid values fall back to `other` with a warning
+- `source_refs`: Path traversal check for each path (paths containing `..` are excluded with a warning)
+- Undefined fields are ignored (no strict schema validation)
 
 ### SectionSplitter
 
-H2/H3見出しでセクションに分割する。
+Splits content into sections at H2/H3 headings.
 
-**分割ルール**:
-1. H2/H3が境界。H1はタイトル、H4以下は親セクションに含む
-2. 最初のH2前の内容 → `section_order=0`, `heading=null`
-3. 各セクションの`section_order`は0から連番
+**Splitting rules**:
+1. H2/H3 are boundaries. H1 is the title, H4 and below are included in the parent section
+2. Content before the first H2 -> `section_order=0`, `heading=null`
+3. Each section's `section_order` is sequential starting from 0
 
-**動的サイズ調整**:
-- 256トークン超 → 段落（空行）で動的サブ分割
-- 32トークン未満 → 前のセクションにマージ
-- トークン数推定: CJK文字×1.5 + 英語単語×1.3
+**Dynamic size adjustment**:
+- Over 256 tokens -> Dynamic sub-splitting at paragraph boundaries (blank lines)
+- Under 32 tokens -> Merge with the previous section
+- Token estimation: CJK characters x 1.5 + English words x 1.3
 
 ### WikiLinkExtractor
 
-remarkプラグインとして動作し、`[[target]]`および`[[target|type]]`パターンを抽出する。
+Operates as a remark plugin, extracting `[[target]]` and `[[target|type]]` patterns.
 
-- コードブロック内のWikiLinkは無視
-- リンク周辺50文字のコンテキストを抽出
-- 無効なリンク種別はwarning付きで`references`にフォールバック
+- WikiLinks inside code blocks are ignored
+- Extracts 50 characters of context around each link
+- Invalid link types fall back to `references` with a warning
 
 ### MarkdownLinkExtractor
 
-remarkプラグインとして動作し、通常のMarkdownリンク`[text](./path.md)`から内部`.md`ファイルへのリンクを抽出する。
+Operates as a remark plugin, extracting links to internal `.md` files from standard Markdown links `[text](./path.md)`.
 
-- 外部URL（`http://`, `https://`, `mailto:`）、アンカーのみ（`#section`）、非`.md`ファイルは無視
-- アンカーフラグメントとクエリ文字列を除去してターゲットパスを解決
-- URLエンコード（`%20`等）をデコード
-- パストラバーサル防止（docs_dir外を指すパスはスキップ）
-- リンク種別は常に`references`
-- WikiLinkと同一ターゲットを指す場合はWikiLinkが優先され重複排除される
+- External URLs (`http://`, `https://`, `mailto:`), anchor-only (`#section`), and non-`.md` files are ignored
+- Anchor fragments and query strings are stripped to resolve the target path
+- URL encoding (`%20`, etc.) is decoded
+- Path traversal prevention (paths pointing outside docs_dir are skipped)
+- Link type is always `references`
+- When pointing to the same target as a WikiLink, the WikiLink takes priority and duplicates are removed
 
-## 変更処理
+## Change Processing
 
 ### ChangeProcessor
 
-ファイル変更をデータベース更新に変換するパイプライン。
+A pipeline that transforms file changes into database updates.
 
 #### processFile(filepath, content, options)
 
-1. **パース**: `MarkdownParser.parse(content)` → ParseResult
-2. **ドキュメントupsert**: body_hash比較。変更なしかつ`forceUpdate=false`ならスキップ
-3. **セクション置換**: `SectionRepository.replaceByDocId()` で差分更新。content_hashが一致するセクションはembeddingを保持
-4. **リンク解決**: `LinkResolver`でWikiLink・Markdownリンクをファイルパスに変換。解決後に同一ターゲット+同一種別のリンクを重複排除。未解決はダングリングリンクとして保存
-5. **ダングリングリンク再解決**: 新規ドキュメント追加時に既存のダングリングリンクをタイトル/ベースネームで再解決
-6. **source_refs同期**: ソースファイルのSHA-256ハッシュを計算・保存
-7. **Embeddingキュー投入**: embedding未生成またはcontent変更のセクションをキューに追加
+1. **Parse**: `MarkdownParser.parse(content)` -> ParseResult
+2. **Document upsert**: body_hash comparison. Skipped if unchanged and `forceUpdate=false`
+3. **Section replacement**: Differential update via `SectionRepository.replaceByDocId()`. Sections with matching content_hash retain their embeddings
+4. **Link resolution**: Convert WikiLinks and Markdown links to file paths via `LinkResolver`. After resolution, deduplicate links with the same target + same type. Unresolved links are saved as dangling links
+5. **Dangling link re-resolution**: When a new document is added, existing dangling links are re-resolved by title/basename
+6. **source_refs sync**: Compute and store SHA-256 hashes of source files
+7. **Embedding queue enqueue**: Add sections with no embedding or changed content to the queue
 
-返却値: `{ docId, sectionsCreated, linksResolved, linksDangling, embeddingsQueued, skipped }`
+Return value: `{ docId, sectionsCreated, linksResolved, linksDangling, embeddingsQueued, skipped }`
 
 #### processChange(FileChangeEvent)
 
-- `add` / `change`: ファイルを読み込んでprocessFileを呼び出す
-- `unlink`: ドキュメント・セクション・リンクを削除し、VectorIndexからも除去
+- `add` / `change`: Read the file and call processFile
+- `unlink`: Delete the document, sections, and links, and remove from VectorIndex
 
-## リンク解決
+## Link Resolution
 
 ### LinkResolver
 
-WikiLinkおよび通常Markdownリンクのターゲット名からファイルパスを解決する。
+Resolves file paths from WikiLink and standard Markdown link target names.
 
-**マッチング戦略**（優先順位順）:
-1. 完全パスマッチ（`path/to/file.md`）
-2. ベースネームマッチ（`.md`拡張子の有無を考慮）
-3. タイトルマッチ（全ドキュメントのタイトルから検索）
+**Matching strategy** (in priority order):
+1. Full path match (`path/to/file.md`)
+2. Basename match (considering presence/absence of `.md` extension)
+3. Title match (search across all document titles)
 
-**ダングリングリンク再解決**: 新規ドキュメントが追加された際に、そのタイトル/ベースネームに一致する未解決リンクを自動的に解決する。
+**Dangling link re-resolution**: When a new document is added, unresolved links matching its title/basename are automatically resolved.
 
-## Embeddingキュー
+## Embedding Queue
 
 ### EmbeddingQueue
 
-バックグラウンドで非同期にEmbeddingを生成するジョブキュー。
+A job queue that asynchronously generates embeddings in the background.
 
-- **バッチサイズ**: 32（`config.embedding.batch_size`）
-- **処理フロー**: enqueue → バッチ生成 → DB保存 → VectorIndex更新
-- **エラーハンドリング**: バッチ全体の失敗時は個別リトライにフォールバック
-- **イベント通知**: `queue:progress`（進捗）、`queue:complete`（完了）
+- **Batch size**: 32 (`config.embedding.batch_size`)
+- **Processing flow**: enqueue -> Generate batch -> Save to DB -> Update VectorIndex
+- **Error handling**: On batch-level failure, falls back to individual retries
+- **Event notifications**: `queue:progress` (progress), `queue:complete` (completion)
 
-### Embeddingの保存先
+### Embedding Storage
 
-1. `SectionRepository.updateEmbedding(id, buffer, model)` — BLOBとして永続化
-2. `VectorIndex.upsert(sectionId, docId, embedding)` — インメモリインデックスに追加
+1. `SectionRepository.updateEmbedding(id, buffer, model)` -- Persisted as BLOB
+2. `VectorIndex.upsert(sectionId, docId, embedding)` -- Added to in-memory index
 
-### 差分Embedding
+### Differential Embedding
 
-content_hashが変更されたセクションのみEmbeddingを再生成する。ドキュメントの軽微な修正（タイプミス修正等）では、変更されたセクションのみが再処理され、他のセクションのembeddingは保持される。
+Only sections with changed content_hash have their embeddings regenerated. For minor document edits (e.g., typo fixes), only the changed sections are reprocessed while other sections' embeddings are preserved.
 
-## メモリ管理
+## Memory Management
 
-- ベクトルインデックスは`Float32Array`でインメモリ保持。1000ドキュメント・3000セクション・1024次元の場合、約12MBのメモリ使用量
-- SQLiteのmmap_sizeは256MBに制限
-- Embeddingバッチサイズ32でメモリ消費を制御
-- 遅延コンパクション（20%の空きエントリでトリガー）でインデックスの肥大化を防止
+- Vector index is held in-memory as `Float32Array`. For 1000 documents, 3000 sections, and 1024 dimensions, approximately 12MB of memory usage
+- SQLite mmap_size is limited to 256MB
+- Embedding batch size of 32 controls memory consumption
+- Lazy compaction (triggered at 20% empty entries) prevents index bloat

@@ -1,25 +1,27 @@
 ---
-title: システムアーキテクチャ設計
+title: System Architecture Design
 doc_type: design
 source_refs:
   - src/core/engine.ts
   - src/main.ts
 ---
 
-# システムアーキテクチャ設計
+[日本語](./architecture.ja.md)
 
-Unified Blueprint（UBP）は、Git管理されたMarkdownドキュメント群をDocument Graphとして構造化し、AIエージェントからのセマンティック検索・グラフ探索を可能にするDocumentation-as-Codeミドルウェアである。
+# System Architecture Design
 
-## 設計原則
+Unified Blueprint (UBP) is a Documentation-as-Code middleware that structures Git-managed Markdown documents as a Document Graph, enabling semantic search and graph traversal from AI agents.
 
-- **ローカルファースト**: 外部APIへの依存なし。Embeddingモデルはローカル実行（transformers.js / ONNX Runtime）
-- **ゼロコンフィグ起動**: `ubp init` 一発でセットアップ完了。デフォルト設定で実用的に動作する
-- **Documentation-as-Code**: ドキュメントはGitで管理し、WikiLinkおよび通常Markdownリンクでドキュメント間の関係を明示する
-- **MCP統合**: Model Context Protocol経由でClaude Desktop・Cursor等のAIエージェントと直接連携する
+## Design Principles
 
-## レイヤー構造
+- **Local-first**: No external API dependencies. Embedding models run locally (transformers.js / ONNX Runtime)
+- **Zero-config startup**: Setup completes with a single `ubp init` command. Works practically with default settings
+- **Documentation-as-Code**: Documents are managed in Git, with WikiLinks and standard Markdown links making inter-document relationships explicit
+- **MCP integration**: Direct integration with AI agents such as Claude Desktop and Cursor via Model Context Protocol
 
-システムは4つのレイヤーで構成される。各レイヤーは一方向の依存関係のみを持ち、上位レイヤーが下位レイヤーに依存する。
+## Layer Structure
+
+The system consists of four layers. Each layer has unidirectional dependencies only, with upper layers depending on lower layers.
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -44,76 +46,76 @@ Unified Blueprint（UBP）は、Git管理されたMarkdownドキュメント群�
 └──────────────────────────────────────────────────┘
 ```
 
-### Source Layer（入力）
+### Source Layer (Input)
 
-Git管理されたMarkdownファイル群。フロントマターで`doc_type`・`source_refs`等のメタデータを、本文中のWikiLink（`[[target|link_type]]`）および通常Markdownリンク（`[text](./path.md)`）でドキュメント間の関係を記述する。
+Git-managed Markdown files. Metadata such as `doc_type` and `source_refs` is described in frontmatter, while inter-document relationships are expressed through WikiLinks (`[[target|link_type]]`) and standard Markdown links (`[text](./path.md)`) in the body.
 
 ### Core Layer
 
-ドメインロジックを担当するレイヤー。`UbpEngine`（`src/core/engine.ts`）がファサードとして全機能を統合する。Interface Layerは`UbpEngine`のみを通じてCore Layerにアクセスする。
+The layer responsible for domain logic. `UbpEngine` (`src/core/engine.ts`) serves as the facade that integrates all functionality. The Interface Layer accesses the Core Layer exclusively through `UbpEngine`.
 
-| モジュール | ディレクトリ | 責務 |
+| Module | Directory | Responsibility |
 |---|---|---|
-| Parser | `src/core/parser/` | Markdownパース、フロントマター解析、セクション分割、WikiLink・Markdownリンク抽出 |
-| Linker | `src/core/linker/` | WikiLink・Markdownリンクのファイルパス解決、ダングリングリンクの再解決 |
-| Search | `src/core/search/` | ハイブリッド検索（ベクトル＋グラフ＋FTS5）、フォールバック |
-| Graph | `src/core/graph/` | N-hopグラフ走査、近接度スコアリング |
-| Watcher | `src/core/watcher/` | ファイル変更監視、デバウンス処理、変更パイプライン |
-| Staleness | `src/core/staleness/` | source_refsハッシュ比較による陳腐化検知 |
-| Embedding | `src/core/embedding/` | Embeddingジョブキュー、バッチ処理 |
-| Suggest | `src/core/suggest/` | ベクトル類似度によるリンク提案 |
+| Parser | `src/core/parser/` | Markdown parsing, frontmatter analysis, section splitting, WikiLink and Markdown link extraction |
+| Linker | `src/core/linker/` | File path resolution for WikiLinks and Markdown links, dangling link re-resolution |
+| Search | `src/core/search/` | Hybrid search (vector + graph + FTS5), fallback |
+| Graph | `src/core/graph/` | N-hop graph traversal, proximity scoring |
+| Watcher | `src/core/watcher/` | File change monitoring, debounce processing, change pipeline |
+| Staleness | `src/core/staleness/` | Staleness detection via source_refs hash comparison |
+| Embedding | `src/core/embedding/` | Embedding job queue, batch processing |
+| Suggest | `src/core/suggest/` | Link suggestions based on vector similarity |
 
 ### Data Layer
 
-SQLite（better-sqlite3）によるデータ永続化と、インメモリVectorIndexによるベクトル検索を提供する。`DatabaseManager`が全リポジトリとサービスを統合管理する。
+Provides data persistence via SQLite (better-sqlite3) and vector search via an in-memory VectorIndex. `DatabaseManager` manages all repositories and services in a unified manner.
 
-詳細は[[database-schema|depends_on]]を参照。
+See [[database-schema|depends_on]] for details.
 
 ### Embedding Layer
 
-EmbeddingProviderインターフェースによりモデル実装を抽象化する。デフォルトの`LocalEmbeddingProvider`はtransformers.js（ONNX Runtime）でローカル実行する。
+Abstracts model implementations through the EmbeddingProvider interface. The default `LocalEmbeddingProvider` runs locally using transformers.js (ONNX Runtime).
 
-詳細は[[embedding-model|depends_on]]を参照。
+See [[embedding-model|depends_on]] for details.
 
 ### Interface Layer
 
-#### CLI（Commander.js）
+#### CLI (Commander.js)
 
-8つのコマンドを提供: init, serve, search, status, reindex, stale, suggest-links, version。詳細は[[cli-commands|depends_on]]を参照。
+Provides 8 commands: init, serve, search, status, reindex, stale, suggest-links, version. See [[cli-commands|depends_on]] for details.
 
 #### MCP Server
 
-`@modelcontextprotocol/sdk`を使用し、stdio経由で6つのツールを公開する。詳細は[[mcp-tools|depends_on]]を参照。
+Exposes 6 tools via stdio using `@modelcontextprotocol/sdk`. See [[mcp-tools|depends_on]] for details.
 
-## UbpEngine ファサード
+## UbpEngine Facade
 
-`UbpEngine`はCore Layerの公開APIであり、Interface Layerとの唯一の接点となる。
+`UbpEngine` is the public API of the Core Layer and the sole point of contact with the Interface Layer.
 
-### ライフサイクル
+### Lifecycle
 
-1. **initialize()**: 新規プロジェクトの初期化。設定保存→DB作成→Embeddingプロバイダー初期化→ファイルスキャン→パース→インデックス構築→Embeddingキュー起動
-2. **loadExisting()**: 既存プロジェクトの読み込み。設定ロード→DB接続→Embeddingプロバイダー初期化→コアモジュール初期化
-3. **close()**: リソース解放。ファイル監視停止→Embeddingキュー停止→プロバイダー解放→DB切断→ロガー終了
+1. **initialize()**: Initialize a new project. Save config -> Create DB -> Initialize embedding provider -> Scan files -> Parse -> Build index -> Start embedding queue
+2. **loadExisting()**: Load an existing project. Load config -> Connect DB -> Initialize embedding provider -> Initialize core modules
+3. **close()**: Release resources. Stop file watcher -> Stop embedding queue -> Release provider -> Disconnect DB -> Terminate logger
 
-### 主要操作
+### Primary Operations
 
-| メソッド | 説明 |
+| Method | Description |
 |---|---|
-| `search(SearchInput)` | ハイブリッドセマンティック検索 |
-| `fulltextSearch(FulltextSearchInput)` | FTS5全文検索 |
-| `getPage(GetPageInput)` | 単一ページ取得（リンク・陳腐化含む） |
-| `getContext(GetContextInput)` | ページ＋グラフ近傍取得 |
-| `listPages(ListPagesInput)` | 全ページ一覧 |
-| `getGraph(GetGraphInput)` | グラフ構造取得 |
-| `getStatus()` | プロジェクト統計 |
-| `getStaleDocuments()` | 陳腐化ドキュメント一覧 |
-| `suggestLinks()` | リンク提案生成 |
-| `startWatching()` / `stopWatching()` | ファイル監視の制御 |
-| `reindex(ReindexOptions)` | インデックス再構築 |
+| `search(SearchInput)` | Hybrid semantic search |
+| `fulltextSearch(FulltextSearchInput)` | FTS5 full-text search |
+| `getPage(GetPageInput)` | Retrieve a single page (including links and staleness) |
+| `getContext(GetContextInput)` | Retrieve a page with graph neighbors |
+| `listPages(ListPagesInput)` | List all pages |
+| `getGraph(GetGraphInput)` | Retrieve graph structure |
+| `getStatus()` | Project statistics |
+| `getStaleDocuments()` | List stale documents |
+| `suggestLinks()` | Generate link suggestions |
+| `startWatching()` / `stopWatching()` | Control file watching |
+| `reindex(ReindexOptions)` | Rebuild index |
 
-## エラーハンドリング
+## Error Handling
 
-エラーは`UbpError`基底クラスから派生する階層化カスタムエラーで管理する。
+Errors are managed through hierarchical custom errors derived from the `UbpError` base class.
 
 ```
 UbpError (base)
@@ -126,49 +128,49 @@ UbpError (base)
 └── IndexNotReadyError
 ```
 
-- ユーザー向けエラー（CLI出力・MCP応答）ではスタックトレースを含めない
-- MCP経由のエラーはJSON-RPC形式でエラーコードとメッセージを返す
-- Embeddingプロバイダー初期化失敗時はFTS5フォールバックで動作を継続する
+- User-facing errors (CLI output, MCP responses) do not include stack traces
+- Errors via MCP are returned in JSON-RPC format with error codes and messages
+- When embedding provider initialization fails, operation continues with FTS5 fallback
 
-## 設定管理
+## Configuration Management
 
-設定は`.ubp/config.json`に保存される。`UbpConfig`型で定義され、`DEFAULT_CONFIG`がデフォルト値を提供する。
+Configuration is stored in `.ubp/config.json`. It is defined by the `UbpConfig` type, with `DEFAULT_CONFIG` providing default values.
 
 ```
 .ubp/
-├── config.json      # プロジェクト設定
-├── knowledge.db     # SQLiteデータベース
-├── knowledge.db-wal # WALファイル
-└── serve.lock       # プロセスロック
+├── config.json      # Project configuration
+├── knowledge.db     # SQLite database
+├── knowledge.db-wal # WAL file
+└── serve.lock       # Process lock
 ```
 
-設定の詳細は以下の通り:
+Configuration details are as follows:
 
-| キー | デフォルト | 説明 |
+| Key | Default | Description |
 |---|---|---|
-| `docs_dir` | `"docs"` | ドキュメントディレクトリ |
-| `source.include` | `["**/*.md"]` | 対象ファイルパターン |
-| `source.exclude` | `["**/node_modules/**", ...]` | 除外パターン |
-| `embedding.model` | `"Xenova/multilingual-e5-large"` | Embeddingモデル名 |
-| `embedding.dimensions` | `1024` | ベクトル次元数 |
-| `embedding.batch_size` | `32` | バッチサイズ |
-| `search.alpha` | `0.7` | ベクトル重み（ハイブリッド検索） |
-| `search.default_limit` | `10` | デフォルト検索件数 |
-| `search.max_depth` | `2` | グラフ走査最大深度 |
-| `staleness.threshold_days` | `7` | 陳腐化閾値日数 |
-| `log.level` | `"info"` | ログレベル |
+| `docs_dir` | `"docs"` | Document directory |
+| `source.include` | `["**/*.md"]` | Target file patterns |
+| `source.exclude` | `["**/node_modules/**", ...]` | Exclude patterns |
+| `embedding.model` | `"Xenova/multilingual-e5-large"` | Embedding model name |
+| `embedding.dimensions` | `1024` | Vector dimensions |
+| `embedding.batch_size` | `32` | Batch size |
+| `search.alpha` | `0.7` | Vector weight (hybrid search) |
+| `search.default_limit` | `10` | Default search result count |
+| `search.max_depth` | `2` | Maximum graph traversal depth |
+| `staleness.threshold_days` | `7` | Staleness threshold in days |
+| `log.level` | `"info"` | Log level |
 
-## デプロイメント
+## Deployment
 
-- ローカルプロセスとして動作し、外部サービスへの依存はない
-- npmパッケージとして配布（`npx ubp init`で即座に利用開始）
-- Node.js 18以上が必要
-- Embeddingモデルは初回実行時に自動ダウンロードされ、`~/.cache/ubp/models/`にキャッシュされる
-- プロセスロック（`serve.lock`）によりMCPサーバーの多重起動を防止する
+- Runs as a local process with no external service dependencies
+- Distributed as an npm package (start immediately with `npx ubp init`)
+- Requires Node.js 18 or higher
+- Embedding models are automatically downloaded on first run and cached in `~/.cache/ubp/models/`
+- Process lock (`serve.lock`) prevents multiple MCP server instances from starting
 
-## 非機能要件
+## Non-functional Requirements
 
-- 検索レスポンス: 200ms以内（1000ドキュメント規模）
-- 初期化: ファイル数に対して線形スケール
-- メモリ: ベクトルインデックスはFloat32Arrayでインメモリ保持、SQLiteはmmap 256MBまで
-- データベース: WALモード、synchronous=NORMAL、cache_size=64MB
+- Search response: Within 200ms (at 1000-document scale)
+- Initialization: Scales linearly with file count
+- Memory: Vector index held in-memory as Float32Array, SQLite mmap up to 256MB
+- Database: WAL mode, synchronous=NORMAL, cache_size=64MB
