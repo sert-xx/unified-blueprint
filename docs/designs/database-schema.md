@@ -49,7 +49,7 @@ The primary table storing document metadata.
 
 ```sql
 CREATE TABLE documents (
-    id          TEXT    PRIMARY KEY,         -- UUID v4
+    id          TEXT    PRIMARY KEY,         -- UUID v7
     filepath    TEXT    NOT NULL UNIQUE,     -- Relative path from docs_dir
     title       TEXT    NOT NULL,            -- Document title
     doc_type    TEXT    NOT NULL DEFAULT 'spec'

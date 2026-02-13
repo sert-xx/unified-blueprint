@@ -58,15 +58,15 @@ All source_refs hashes match `last_synced_hash`. The document is up to date and 
 
 ### possibly_stale
 
-Documents where the source_refs field is not defined. Since there is no mapping to source code, staleness cannot be determined.
+Documents where `source_refs` is defined but at least one referenced file has a hash mismatch within the staleness threshold period. The document may need updating but is not yet confirmed stale.
 
 ### stale
 
-At least one source_ref hash differs from `last_synced_hash`. The referenced source code has changed and the document may need updating.
+At least one source_ref hash differs from `last_synced_hash`. The referenced source code has changed and the document needs updating.
 
 ### untracked
 
-The source_refs field is defined but the referenced files do not exist. This may be caused by file moves, deletions, or incorrect paths.
+The `source_refs` field is defined but the referenced files do not exist (no `last_synced_hash` recorded). This may be caused by file moves, deletions, or incorrect paths.
 
 ## Detection Flow
 

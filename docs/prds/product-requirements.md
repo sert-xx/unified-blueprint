@@ -591,8 +591,8 @@ CREATE VIRTUAL TABLE sections_fts USING fts5(
     heading,
     content,
     content='sections',
-    content_rowid='rowid',
-    tokenize='unicode61'
+    content_rowid='id',
+    tokenize='trigram'
 );
 ```
 

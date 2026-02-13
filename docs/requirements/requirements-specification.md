@@ -383,7 +383,7 @@ Performance targets for documents at the 1000-page scale:
 ### 5.5 Portability
 
 - Must work on major platforms: macOS, Linux, Windows
-- Must work on Node.js v20 or higher
+- Must work on Node.js v18 or higher
 - Must support instant execution via `npx`
 
 ---
@@ -449,7 +449,7 @@ CREATE TABLE pages (
 CREATE TABLE links (
     source_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
     target_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    type TEXT NOT NULL DEFAULT 'reference',  -- Edge type (MVP: reference only)
+    type TEXT NOT NULL DEFAULT 'references',  -- Edge type (MVP: references only)
     context TEXT,                     -- Context where link appears (50 chars before/after)
     created_at TEXT NOT NULL,
     PRIMARY KEY (source_page_id, target_page_id)
@@ -593,7 +593,7 @@ interface SuggestedLink {
 }
 ```
 
-### 7.4 Graph Traversal (Recursive CTE)
+### 7.6 Graph Traversal (Recursive CTE)
 
 ```sql
 -- Traverse up to depth hops from center_page_id
@@ -615,7 +615,7 @@ SELECT DISTINCT source_page_id, target_page_id, depth FROM graph;
 - Circular references are permitted (directed graph). Depth limits prevent infinite loops
 - Backlink retrieval uses reverse lookup via `idx_links_target` index
 
-### 7.5 Auto-Vectorization Pipeline
+### 7.7 Auto-Vectorization Pipeline
 
 ```
 Page save

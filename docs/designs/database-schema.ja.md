@@ -49,7 +49,7 @@ documents 1──N sections 1──0..1 embedding (BLOB)
 
 ```sql
 CREATE TABLE documents (
-    id          TEXT    PRIMARY KEY,         -- UUID v4
+    id          TEXT    PRIMARY KEY,         -- UUID v7
     filepath    TEXT    NOT NULL UNIQUE,     -- docs_dir からの相対パス
     title       TEXT    NOT NULL,            -- ドキュメントタイトル
     doc_type    TEXT    NOT NULL DEFAULT 'spec'

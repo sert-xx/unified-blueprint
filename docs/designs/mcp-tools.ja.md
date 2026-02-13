@@ -62,7 +62,7 @@ Graph-Awareセマンティック検索を実行する。ベクトル類似度・
 }
 ```
 
-実装は[[search-algorithm|implements]]に基づく。
+実装は[[search-algorithm]]に基づく。
 
 ### ubp_get_page
 

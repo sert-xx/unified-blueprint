@@ -383,7 +383,7 @@ npx ubp viewer
 ### 5.5 ポータビリティ
 
 - macOS、Linux、Windows の主要プラットフォームで動作すること
-- Node.js v20 以上で動作すること
+- Node.js v18 以上で動作すること
 - `npx` による即時実行が可能であること
 
 ---
@@ -449,7 +449,7 @@ CREATE TABLE pages (
 CREATE TABLE links (
     source_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
     target_page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
-    type TEXT NOT NULL DEFAULT 'reference',  -- Edge type (MVP: reference only)
+    type TEXT NOT NULL DEFAULT 'references',  -- Edge type (MVP: references only)
     context TEXT,                     -- Context where link appears (50 chars before/after)
     created_at TEXT NOT NULL,
     PRIMARY KEY (source_page_id, target_page_id)
@@ -593,7 +593,7 @@ interface SuggestedLink {
 }
 ```
 
-### 7.4 グラフ探索（再帰CTE）
+### 7.6 グラフ探索（再帰CTE）
 
 ```sql
 -- center_page_id から depth ホップまで探索
@@ -615,7 +615,7 @@ SELECT DISTINCT source_page_id, target_page_id, depth FROM graph;
 - 循環参照は許容する（有向グラフ）。深さ制限で無限ループを防止
 - バックリンクの取得には `idx_links_target` インデックスによる逆引きを使用
 
-### 7.5 Auto-Vectorization パイプライン
+### 7.7 Auto-Vectorization パイプライン
 
 ```
 ページ保存

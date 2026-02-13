@@ -62,7 +62,7 @@ Executes a Graph-Aware semantic search. Returns optimal results using 3-way hybr
 }
 ```
 
-Implementation is based on [[search-algorithm|the search algorithm]].
+Implementation is based on [[search-algorithm]].
 
 ### ubp_get_page
 
