@@ -1,3 +1,5 @@
+[English](./product-requirements.md)
+
 # Unified Blueprint (UBP) - 要求定義書
 
 **Version:** 3.0.0
@@ -253,8 +255,8 @@ AI Agent / ユーザー
 ```sql
 PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
-PRAGMA cache_size = -64000;         -- 64MB キャッシュ
-PRAGMA mmap_size = 268435456;       -- 256MB メモリマップ
+PRAGMA cache_size = -64000;         -- 64MB cache
+PRAGMA mmap_size = 268435456;       -- 256MB memory map
 PRAGMA temp_store = MEMORY;
 PRAGMA foreign_keys = ON;
 ```
@@ -589,8 +591,8 @@ CREATE VIRTUAL TABLE sections_fts USING fts5(
     heading,
     content,
     content='sections',
-    content_rowid='rowid',
-    tokenize='unicode61'
+    content_rowid='id',
+    tokenize='trigram'
 );
 ```
 
