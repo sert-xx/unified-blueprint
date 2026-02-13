@@ -1,5 +1,5 @@
 ---
-title: Embeddingモデル設計
+title: Embedding Model Design
 doc_type: spec
 source_refs:
   - src/embedding/provider.ts
@@ -7,25 +7,27 @@ source_refs:
   - src/embedding/model-manager.ts
 ---
 
-# Embeddingモデル設計
+[日本語](./embedding-model.ja.md)
 
-ドキュメント検索に使用するEmbeddingモデルの選定理由、プロバイダー抽象化、instruction-tuned対応メカニズムを定義する。
+# Embedding Model Design
 
-## 選定結果
+Defines the rationale for embedding model selection, provider abstraction, and instruction-tuned support mechanism used for document search.
 
-**デフォルトモデル: `Xenova/multilingual-e5-large`**
+## Selection Result
 
-- 次元数: 1024
-- モデルサイズ: 約560MB（ONNX量子化版）
-- プーリング: mean pooling
-- instruction-tuned: query/passageプレフィックス対応
-- ランタイム: transformers.js（ONNX Runtime、ローカル実行）
+**Default model: `Xenova/multilingual-e5-large`**
 
-## モデル選定ベンチマーク
+- Dimensions: 1024
+- Model size: ~560MB (ONNX quantized)
+- Pooling: mean pooling
+- Instruction-tuned: query/passage prefix support
+- Runtime: transformers.js (ONNX Runtime, local execution)
 
-13クエリ（キーワード・セマンティック・同義語/パラフレーズ・クロスリンガルの4カテゴリ）を使用した日本語検索品質ベンチマーク結果:
+## Model Selection Benchmark
 
-| モデル | サイズ | 次元 | Top1正解率 | Top3正解率 |
+Japanese search quality benchmark results using 13 queries across 4 categories (keyword, semantic, synonym/paraphrase, cross-lingual):
+
+| Model | Size | Dimensions | Top1 Accuracy | Top3 Accuracy |
 |---|---|---|---|---|
 | all-MiniLM-L6-v2 | ~90MB | 384 | 15% | 69% |
 | EmbeddingGemma-300M | ~200MB | 768 | 69% | 92% |
@@ -34,63 +36,63 @@ source_refs:
 | **multilingual-e5-large** | **~560MB** | **1024** | **92%** | **100%** |
 | BGE-M3 | ~600MB | 1024 | 85% | 100% |
 
-multilingual-e5-largeが全カテゴリで最高の検索品質を示した。instruction prefix（query:/passage:）の効果により、セマンティック検索と同義語マッチングの精度が向上する。
+multilingual-e5-large demonstrated the highest search quality across all categories. The instruction prefix (query:/passage:) improves accuracy for semantic search and synonym matching.
 
-### ベンチマークカテゴリ
+### Benchmark Categories
 
-- **キーワード（KW）**: 日本語キーワードによる直接的な検索（例: 「WikiLink」「陳腐化」）
-- **セマンティック（SEM）**: 概念的な意味理解を要する検索（例: 「ドキュメント間の依存関係を管理する仕組み」）
-- **同義語/パラフレーズ（SYN）**: 言い換えによる検索（例: 「文書の新鮮さ」→ 陳腐化検知設計）
-- **クロスリンガル（EN）**: 英語クエリでの日本語ドキュメント検索（例: "hybrid search algorithm"）
+- **Keyword (KW)**: Direct search using Japanese keywords (e.g., "WikiLink", "staleness")
+- **Semantic (SEM)**: Searches requiring conceptual understanding (e.g., "mechanism for managing dependencies between documents")
+- **Synonym/Paraphrase (SYN)**: Search by rephrasing (e.g., "document freshness" -> staleness detection design)
+- **Cross-lingual (EN)**: Searching Japanese documents with English queries (e.g., "hybrid search algorithm")
 
-## EmbeddingProviderインターフェース
+## EmbeddingProvider Interface
 
-モデル実装を抽象化し、モデル切り替えをインターフェース実装の追加だけで完結させる。
+Abstracts model implementations so that switching models requires only adding an interface implementation.
 
 ```typescript
 interface EmbeddingProvider {
-  /** プロバイダーの初期化（モデルのロード等） */
+  /** Initialize the provider (load model, etc.) */
   initialize(): Promise<void>;
 
-  /** ドキュメント/パッセージ用 Embedding 生成 */
+  /** Generate embedding for document/passage */
   embed(text: string): Promise<EmbeddingResult>;
 
-  /** バッチ Embedding 生成（スループット最適化） */
+  /** Batch embedding generation (throughput optimized) */
   embedBatch(texts: string[]): Promise<EmbeddingResult[]>;
 
-  /** 検索クエリ用 Embedding 生成（instruction-tuned モデル用） */
+  /** Generate embedding for search query (for instruction-tuned models) */
   embedQuery?(text: string): Promise<EmbeddingResult>;
 
-  /** ロード済みモデルの情報 */
+  /** Get loaded model information */
   getModelInfo(): EmbeddingModelInfo;
 
-  /** リソースの解放 */
+  /** Release resources */
   dispose(): Promise<void>;
 }
 
 interface EmbeddingResult {
-  vector: Float32Array;   // 正規化済みベクトル
-  model: string;          // モデル名
-  dimensions: number;     // 次元数
+  vector: Float32Array;   // normalized vector
+  model: string;          // model name
+  dimensions: number;     // dimension count
 }
 ```
 
 ### embed vs embedQuery
 
-instruction-tunedモデル（e5ファミリー等）ではドキュメント格納時と検索時で異なるプレフィックスを使用する。
+Instruction-tuned models (e5 family, etc.) use different prefixes for document storage and search.
 
-- `embed(text)`: ドキュメント格納用。passage prefix（`"passage: "`）を付与
-- `embedQuery(text)`: 検索クエリ用。query prefix（`"query: "`）を付与
+- `embed(text)`: For document storage. Adds passage prefix (`"passage: "`)
+- `embedQuery(text)`: For search queries. Adds query prefix (`"query: "`)
 
-`embedQuery`はオプショナルメソッド。未定義の場合、`HybridSearch`は`embed()`にフォールバックする。
+`embedQuery` is an optional method. If undefined, `HybridSearch` falls back to `embed()`.
 
 ## LocalEmbeddingProvider
 
-transformers.js（ONNX Runtime）によるローカルEmbedding生成の実装。
+Local embedding generation implementation using transformers.js (ONNX Runtime).
 
-### デュアルパッケージサポート
+### Dual Package Support
 
-`@huggingface/transformers`（v3）を優先し、`@xenova/transformers`（v2）にフォールバックする。いずれもoptionalDependencyとして定義。
+Prioritizes `@huggingface/transformers` (v3) and falls back to `@xenova/transformers` (v2). Both are defined as optionalDependencies.
 
 ```typescript
 private async importTransformers(): Promise<any> {
@@ -102,49 +104,49 @@ private async importTransformers(): Promise<any> {
 }
 ```
 
-### モデル自動検出
+### Automatic Model Detection
 
-モデル名に基づいて以下を自動選択:
+Automatically selects the following based on model name:
 
-| モデルファミリー | プーリング | query prefix | passage prefix |
+| Model Family | Pooling | query prefix | passage prefix |
 |---|---|---|---|
-| e5系（`e5-`を含む） | mean | `"query: "` | `"passage: "` |
-| BGE系（`bge`を含む） | cls | なし | なし |
-| その他 | mean | なし | なし |
+| e5 series (contains `e5-`) | mean | `"query: "` | `"passage: "` |
+| BGE series (contains `bge`) | cls | none | none |
+| Other | mean | none | none |
 
-### 次元数自動検出
+### Automatic Dimension Detection
 
-初期化時にプローブEmbedding（`"test"`）を生成し、出力ベクトルの長さから次元数を自動検出する。VectorIndexもデータの最初のロード/挿入時に次元数を自動判定する。
+During initialization, generates a probe embedding (`"test"`) and automatically detects the dimension count from the output vector length. VectorIndex also auto-detects dimensions on the first data load/insert.
 
-### テキスト切り詰め
+### Text Truncation
 
-入力テキストは最大2048文字で切り詰める。e5-largeの最大512トークンを十分に活用するための設定。
+Input text is truncated to a maximum of 2048 characters. This setting is designed to fully utilize e5-large's maximum of 512 tokens.
 
-### バッチ処理
+### Batch Processing
 
-`embedBatch(texts)`はバッチサイズ32で分割処理する。バッチ全体が失敗した場合は個別の`embed()`呼び出しにフォールバックする。
+`embedBatch(texts)` processes in chunks of batch size 32. If the entire batch fails, it falls back to individual `embed()` calls.
 
 ## ModelManager
 
-transformers.jsモデルのキャッシュ管理。
+Cache management for transformers.js models.
 
-- キャッシュディレクトリ: `~/.cache/ubp/models/`（チルダ展開対応）
-- `ensureCacheDir()`: キャッシュディレクトリの作成
-- `isModelCached(modelName)`: モデルファイルの存在確認
-- `getCacheDir()`: キャッシュパスの取得
+- Cache directory: `~/.cache/ubp/models/` (with tilde expansion)
+- `ensureCacheDir()`: Creates the cache directory
+- `isModelCached(modelName)`: Checks for model file existence
+- `getCacheDir()`: Gets the cache path
 
-モデルは初回の`initialize()`呼び出し時にHugging Face Hubから自動ダウンロードされ、以降はキャッシュから読み込まれる。
+Models are automatically downloaded from Hugging Face Hub on the first `initialize()` call and loaded from cache thereafter.
 
-## モデル切り替え手順
+## Model Switching Procedure
 
-1. `config.json`の`embedding.model`と`embedding.dimensions`を変更
-2. `ubp reindex --force`を実行
-3. 全セクションのEmbeddingが新モデルで再生成される
+1. Change `embedding.model` and `embedding.dimensions` in `config.json`
+2. Run `ubp reindex --force`
+3. All section embeddings are regenerated with the new model
 
-`SectionRepository.findByEmbeddingModelNot(model)`でモデルが異なるセクションを検出し、マイグレーション対象を特定できる。
+Use `SectionRepository.findByEmbeddingModelNot(model)` to detect sections with a different model and identify migration targets.
 
-## 設計上の制約
+## Design Constraints
 
-- ローカルファースト原則により、外部API（OpenAI等）のプロバイダーはMVP段階では提供しない
-- モデルサイズは初回ダウンロード時にのみ影響し、以降はキャッシュから即座にロードされる
-- クロスリンガル検索（英語クエリ→日本語ドキュメント）はベクトル検索のみが有効。FTS5キーワード検索は言語をまたげない
+- Following the local-first principle, external API providers (OpenAI, etc.) are not provided in the MVP stage
+- Model size only impacts the initial download; models are loaded instantly from cache thereafter
+- Cross-lingual search (English query -> Japanese documents) is effective only with vector search. FTS5 keyword search cannot cross language boundaries
