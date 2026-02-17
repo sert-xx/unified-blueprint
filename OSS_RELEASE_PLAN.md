@@ -60,16 +60,16 @@ Unified Blueprint (UBP) を OSS として公開するための作業プラン。
 
 ## Phase 7: GitHub リポジトリ設定
 
-- [ ] 7-1. リポジトリ Description 設定 (手動)
-- [ ] 7-2. Topics 設定 (手動)
-- [ ] 7-3. Branch protection 設定 (手動)
-- [ ] 7-4. Discussions 有効化検討 (手動)
+- [x] 7-1. リポジトリ Description 設定 (手動)
+- [x] 7-2. Topics 設定 (手動)
+- [x] 7-3. Branch protection 設定 (手動)
+- ~~7-4. Discussions 有効化検討~~ — 見送り
 
 ## Phase 8: 最終確認
 
-- [ ] 8-1. クリーンインストールテスト
-- [ ] 8-2. npx での動作確認
-- [ ] 8-3. README の全リンク確認
+- [x] 8-1. クリーンインストールテスト — npm pack → 一時ディレクトリ install → ubp version/help 正常動作
+- [x] 8-2. npx での動作確認 — npx ubp version/help 正常動作
+- [x] 8-3. README の全リンク確認 — ローカル3件・外部4件すべて到達確認
 - [x] 8-4. 全体レビュー (デビルズ・アドボケット) — 16件指摘、CRITICAL 3件・HIGH 4件を修正対応
 
 ---
