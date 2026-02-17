@@ -35,40 +35,18 @@ function createProcessor() {
  *
  * 優先順位:
  *   1. Frontmatter の title フィールド
- *   2. 最初の H1 見出し
- *   3. ファイル名（拡張子なし）
+ *   2. ファイルパス（拡張子なし）— ディレクトリ階層をそのままタイトルとして保持
  */
 function resolveTitle(
   frontmatter: Frontmatter,
-  tree: Root,
+  _tree: Root,
   filepath: string,
 ): string {
-  // 1. Frontmatter title
   if (frontmatter.title) {
     return frontmatter.title;
   }
 
-  // 2. 最初の H1 見出し
-  let h1Title: string | undefined;
-  visit(tree, 'heading', (node) => {
-    if (node.depth === 1 && !h1Title) {
-      // 子ノードのテキストを結合
-      h1Title = node.children
-        .map((child) => {
-          if (child.type === 'text') return child.value;
-          if ('value' in child) return String(child.value);
-          return '';
-        })
-        .join('');
-    }
-  });
-  if (h1Title) {
-    return h1Title.trim();
-  }
-
-  // 3. ファイル名（拡張子なし）
-  const basename = filepath.split('/').pop() ?? filepath;
-  return basename.replace(/\.md$/, '');
+  return filepath.replace(/\.md$/, '');
 }
 
 export interface ParseMarkdownOptions {

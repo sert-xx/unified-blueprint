@@ -53,12 +53,12 @@ Content`;
     expect(result.title).toBe('FM Title');
   });
 
-  it('resolves title from H1 when no frontmatter title', () => {
+  it('resolves title from filepath when no frontmatter title (H1 is ignored)', () => {
     const content = `# H1 Title
 
 Content`;
     const result = parseMarkdown(content, 'filename.md');
-    expect(result.title).toBe('H1 Title');
+    expect(result.title).toBe('filename');
   });
 
   it('resolves title from filename when no frontmatter or H1', () => {
@@ -81,7 +81,7 @@ Content`;
 
 Just some content here.`;
     const result = parseMarkdown(content, 'simple.md');
-    expect(result.title).toBe('Simple Document');
+    expect(result.title).toBe('simple');
     expect(result.frontmatter.title).toBeUndefined();
     expect(result.frontmatter.doc_type).toBeUndefined();
   });
@@ -141,7 +141,7 @@ Some text here.`;
 
   it('handles nested path in filepath for title resolution', () => {
     const result = parseMarkdown('Some content', 'docs/guides/setup.md');
-    expect(result.title).toBe('setup');
+    expect(result.title).toBe('docs/guides/setup');
   });
 
   it('extracts standard Markdown links as references', () => {
