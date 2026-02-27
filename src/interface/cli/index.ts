@@ -11,6 +11,10 @@ import { searchCommand } from './commands/search.js';
 import { reindexCommand } from './commands/reindex.js';
 import { staleCommand } from './commands/stale.js';
 import { suggestLinksCommand } from './commands/suggest-links.js';
+import { getPageCommand } from './commands/get-page.js';
+import { getContextCommand } from './commands/get-context.js';
+import { listPagesCommand } from './commands/list-pages.js';
+import { getGraphCommand } from './commands/get-graph.js';
 import { versionCommand } from './commands/version.js';
 import { getVersion } from './version.js';
 
@@ -28,6 +32,10 @@ export function createCli(): Command {
   program.addCommand(reindexCommand());
   program.addCommand(staleCommand());
   program.addCommand(suggestLinksCommand());
+  program.addCommand(getPageCommand());
+  program.addCommand(getContextCommand());
+  program.addCommand(listPagesCommand());
+  program.addCommand(getGraphCommand());
   program.addCommand(versionCommand());
 
   return program;
