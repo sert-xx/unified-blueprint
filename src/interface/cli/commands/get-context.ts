@@ -16,7 +16,7 @@ export function getContextCommand(): Command {
     .argument('<filepath>', 'Filepath of the center page (relative to docs dir)')
     .option('--depth <n>', 'How many hops of related pages to include (1-3)', '1')
     .option('--max-size <bytes>', 'Maximum response size in bytes', '51200')
-    .option('--no-content', 'Omit content from related pages')
+    .option('--no-content', 'Omit content from related pages (human-readable output only)')
     .action(async (filepath: string, options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
 

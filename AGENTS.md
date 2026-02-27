@@ -92,7 +92,7 @@ ubp suggest-links --json   # Suggest implicit link candidates
 
 | MCP Tool | CLI Equivalent |
 |---|---|
-| `ubp_search` | `ubp search <query> --json [--include-links] [--depth N] [--link-types ...]` |
+| `ubp_search` | `ubp search <query> --json [--include-links] [--depth N] [--link-types ...] [--doc-type TYPE]` |
 | `ubp_fulltext_search` | `ubp search <query> --fulltext --json [--doc-type TYPE]` |
 | `ubp_get_page` | `ubp get-page <filepath> --json` |
 | `ubp_get_context` | `ubp get-context <filepath> --json [--depth N] [--max-size N]` |
@@ -139,18 +139,18 @@ ubp search "ClassName" --fulltext --json
 | Option | Description | Default |
 |---|---|---|
 | `--limit <n>` | Number of results | 5 |
-| `--include-links` | Include linked pages in results | false |
-| `--depth <n>` | Link traversal depth (1-3) | 1 |
+| `--include-links` | Include linked pages in results (implied by `--depth`) | false |
+| `--depth <n>` | Link traversal depth (1-3) | config `search.max_depth` |
 | `--link-types <types...>` | Filter: references, depends_on, implements, extends, conflicts_with | all |
 | `--fulltext` | Use FTS5 full-text search | false |
-| `--doc-type <type>` | Filter by type (fulltext mode only) | all |
-| `--no-content` | Omit content from results | false |
+| `--doc-type <type>` | Filter by document type | all |
+| `--no-content` | Omit content (human-readable output only, ignored with `--json`) | false |
 
 ### `ubp get-page`
 
 | Option | Description | Default |
 |---|---|---|
-| `--no-content` | Omit full content | false |
+| `--no-content` | Omit full content (human-readable output only, ignored with `--json`) | false |
 
 ### `ubp get-context`
 
@@ -158,7 +158,7 @@ ubp search "ClassName" --fulltext --json
 |---|---|---|
 | `--depth <n>` | Hops of related pages (1-3) | 1 |
 | `--max-size <bytes>` | Maximum response size | 51200 |
-| `--no-content` | Omit content from related pages | false |
+| `--no-content` | Omit content (human-readable output only, ignored with `--json`) | false |
 
 ### `ubp list-pages`
 

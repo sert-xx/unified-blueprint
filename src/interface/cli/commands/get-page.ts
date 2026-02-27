@@ -14,7 +14,7 @@ export function getPageCommand(): Command {
   return new Command('get-page')
     .description('Retrieve a single page with full content, sections, and links')
     .argument('<filepath>', 'Filepath of the page (relative to docs dir)')
-    .option('--no-content', 'Omit full content from output')
+    .option('--no-content', 'Omit full content (human-readable output only)')
     .action(async (filepath: string, options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
 

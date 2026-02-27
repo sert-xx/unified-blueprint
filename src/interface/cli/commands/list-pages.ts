@@ -2,7 +2,7 @@
  * ubp list-pages - List all pages with summaries
  */
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { resolveGlobalOptions } from '../utils/global-options.js';
 import { createUbpEngine } from '../../../core/engine.js';
 import { printJson } from '../output/json-output.js';
@@ -13,9 +13,20 @@ import type { ListPagesOutput } from '../../../shared/types.js';
 export function listPagesCommand(): Command {
   return new Command('list-pages')
     .description('List all pages in the document graph')
-    .option('--doc-type <type>', 'Filter by document type (spec, design, adr, guide, api, meeting, todo, other)')
-    .option('--sort <field>', 'Sort field: title, updated_at, filepath', 'title')
-    .option('--order <order>', 'Sort order: asc, desc', 'asc')
+    .addOption(
+      new Option('--doc-type <type>', 'Filter by document type')
+        .choices(['spec', 'design', 'adr', 'guide', 'api', 'meeting', 'todo', 'other']),
+    )
+    .addOption(
+      new Option('--sort <field>', 'Sort field')
+        .choices(['title', 'updated_at', 'filepath'])
+        .default('title'),
+    )
+    .addOption(
+      new Option('--order <order>', 'Sort order')
+        .choices(['asc', 'desc'])
+        .default('asc'),
+    )
     .action(async (options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
 

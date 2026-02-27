@@ -2,8 +2,7 @@
  * ubp search <query> - Search documents
  */
 
-import { Command } from 'commander';
-import pc from 'picocolors';
+import { Command, Option } from 'commander';
 import { resolveGlobalOptions } from '../utils/global-options.js';
 import { createUbpEngine } from '../../../core/engine.js';
 import { printJson } from '../output/json-output.js';
@@ -11,17 +10,26 @@ import { handleCommandError } from '../output/error-display.js';
 import { formatBold, formatDim, formatScore } from '../output/formatter.js';
 import type { SearchResult, FulltextResult } from '../../../shared/types.js';
 
+const DOC_TYPES = ['spec', 'design', 'adr', 'guide', 'api', 'meeting', 'todo', 'other'] as const;
+const LINK_TYPES = ['references', 'depends_on', 'implements', 'extends', 'conflicts_with'] as const;
+
 export function searchCommand(): Command {
   return new Command('search')
     .description('Search documents with semantic or fulltext search')
     .argument('<query>', 'Search query')
     .option('--limit <n>', 'Number of results', '5')
-    .option('--no-content', 'Omit content from results')
+    .option('--no-content', 'Omit content from results (human-readable output only)')
     .option('--include-links', 'Include link information')
-    .option('--depth <n>', 'Link traversal depth (1-3, default: 1)')
-    .option('--link-types <types...>', 'Filter by link types (references, depends_on, implements, extends, conflicts_with)')
+    .option('--depth <n>', 'Link traversal depth (1-3)')
+    .addOption(
+      new Option('--link-types <types...>', 'Filter by link types')
+        .choices([...LINK_TYPES]),
+    )
     .option('--fulltext', 'Use FTS5 fulltext search mode')
-    .option('--doc-type <type>', 'Filter by document type (fulltext mode only)')
+    .addOption(
+      new Option('--doc-type <type>', 'Filter by document type')
+        .choices([...DOC_TYPES]),
+    )
     .action(async (query: string, options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
 
@@ -43,18 +51,20 @@ export function searchCommand(): Command {
           }
         } else {
           const depth = options.depth ? Math.min(3, Math.max(1, parseInt(options.depth, 10))) : undefined;
+          const includeLinked = options.includeLinks ?? (depth !== undefined);
           const result = await engine.search({
             query,
             limit,
-            include_linked: options.includeLinks ?? false,
+            include_linked: includeLinked,
             depth,
             link_types: options.linkTypes,
+            doc_type: options.docType,
           });
 
           if (globals.json) {
             printJson(result);
           } else if (!globals.quiet) {
-            renderSearchResults(result.results, options.content !== false, options.includeLinks);
+            renderSearchResults(result.results, options.content !== false, includeLinked);
           }
         }
       } catch (error) {
