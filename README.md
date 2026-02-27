@@ -102,6 +102,10 @@ claude mcp add ubp -- node dist/main.js serve --no-lock
 | `ubp init` | Initialize project (parse and generate embeddings) |
 | `ubp serve` | Start file watcher + MCP server |
 | `ubp search <query>` | Hybrid search / full-text search |
+| `ubp get-page <filepath>` | Retrieve full document content with links |
+| `ubp get-context <filepath>` | Retrieve a document with its related documents |
+| `ubp list-pages` | List all documents |
+| `ubp get-graph` | Document link graph |
 | `ubp status` | Show database statistics |
 | `ubp stale` | Detect stale documents |
 | `ubp reindex` | Reindex all documents |
@@ -109,6 +113,10 @@ claude mcp add ubp -- node dist/main.js serve --no-lock
 | `ubp version` | Show version |
 
 Global options: `--cwd <path>`, `--json`, `--verbose`, `--quiet`
+
+### Using CLI as an alternative to MCP
+
+When MCP server integration is not available, AI agents can use the CLI with `--json` flag to get structured output equivalent to MCP tools. See [AGENTS.md](./AGENTS.md) for detailed instructions.
 
 ## Markdown Notation
 

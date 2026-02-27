@@ -18,7 +18,10 @@ export function searchCommand(): Command {
     .option('--limit <n>', 'Number of results', '5')
     .option('--no-content', 'Omit content from results')
     .option('--include-links', 'Include link information')
+    .option('--depth <n>', 'Link traversal depth (1-3, default: 1)')
+    .option('--link-types <types...>', 'Filter by link types (references, depends_on, implements, extends, conflicts_with)')
     .option('--fulltext', 'Use FTS5 fulltext search mode')
+    .option('--doc-type <type>', 'Filter by document type (fulltext mode only)')
     .action(async (query: string, options, cmd) => {
       const globals = resolveGlobalOptions(cmd);
 
@@ -30,6 +33,7 @@ export function searchCommand(): Command {
           const result = await engine.fulltextSearch({
             query,
             limit,
+            doc_type: options.docType,
           });
 
           if (globals.json) {
@@ -38,10 +42,13 @@ export function searchCommand(): Command {
             renderFulltextResults(result.results, options.content !== false);
           }
         } else {
+          const depth = options.depth ? Math.min(3, Math.max(1, parseInt(options.depth, 10))) : undefined;
           const result = await engine.search({
             query,
             limit,
             include_linked: options.includeLinks ?? false,
+            depth,
+            link_types: options.linkTypes,
           });
 
           if (globals.json) {

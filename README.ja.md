@@ -95,6 +95,10 @@ claude mcp add ubp -- node dist/main.js serve --no-lock
 | `ubp init` | プロジェクト初期化 (パース・埋め込み生成) |
 | `ubp serve` | Watcher + MCP サーバーを起動 |
 | `ubp search <query>` | ハイブリッド検索 / 全文検索 |
+| `ubp get-page <filepath>` | ドキュメント全文・リンク情報の取得 |
+| `ubp get-context <filepath>` | ドキュメント + 関連ドキュメント一括取得 |
+| `ubp list-pages` | ドキュメント一覧 |
+| `ubp get-graph` | ドキュメント間リンクグラフ |
 | `ubp status` | DB 統計情報の表示 |
 | `ubp stale` | 鮮度の低いドキュメントを検出 |
 | `ubp reindex` | 全ドキュメントを再インデックス |
@@ -102,6 +106,10 @@ claude mcp add ubp -- node dist/main.js serve --no-lock
 | `ubp version` | バージョン表示 |
 
 グローバルオプション: `--cwd <path>`, `--json`, `--verbose`, `--quiet`
+
+### MCP の代替としての CLI 利用
+
+MCP サーバーが利用できない環境では、`--json` フラグ付きの CLI コマンドで MCP ツールと同等の構造化データを取得できる。AI エージェントへの指示方法は [AGENTS.md](./AGENTS.md) を参照。
 
 ## Markdown 記法
 
